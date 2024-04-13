@@ -1,34 +1,38 @@
 IDIR=./include
 CC=gcc
-CFLAGS=-I$(IDIR)
+CFLAGS=-I$(IDIR) -I$(ODIR) 
 
-ODIR=./
-LDIR=./
+ODIR=.
+LDIR=.
 
 LIBS=-lm -lfl
 
-_DEPS = tokens.h
+_DEPS = parser.tab.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o lex.yy.o
+_OBJ = main.o lex.yy.o parser.tab.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
-$(ODIR)/%.o: %.c $(DEPS)
+$(ODIR)/%.o: $(ODIR)/%.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-all: scanner etapa1
+all: scanner bison etapa2
 
 run: all
-	./etapa1
+	./etapa2
 
-scanner: scanner.l
-	flex scanner.l
-	$(CC) -c -o lex.yy.o lex.yy.c $(CFLAGS)
+scanner: $(ODIR)/scanner.l
+	flex -o $(ODIR)/lex.yy.c $(ODIR)/scanner.l
 
-etapa1: $(OBJ)
+bison: $(ODIR)/parser.y
+	bison -d -o $(ODIR)/parser.tab.c $(ODIR)/parser.y
+	$(CC) -c -o $(ODIR)/parser.tab.o $(ODIR)/parser.tab.c $(CFLAGS)
+
+etapa2: $(OBJ)
 	$(CC) -o $@ $^ $(LIBS)
 
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ lex.yy.c
+	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ $(ODIR)/lex.yy.c $(ODIR)/parser.tab.c $(ODIR)/parser.tab.h
+
