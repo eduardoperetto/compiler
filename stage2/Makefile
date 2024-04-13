@@ -24,8 +24,9 @@ run: all
 scanner: $(ODIR)/scanner.l
 	flex -o $(ODIR)/lex.yy.c $(ODIR)/scanner.l
 
+BISON_FLAGS=-r all -v --report-file bison_output #-Wcounterexamples
 bison: $(ODIR)/parser.y
-	bison -d -o $(ODIR)/parser.tab.c $(ODIR)/parser.y
+	bison -d $(BISON_FLAGS) -o $(ODIR)/parser.tab.c $(ODIR)/parser.y
 	$(CC) -c -o $(ODIR)/parser.tab.o $(ODIR)/parser.tab.c $(CFLAGS)
 
 etapa2: $(OBJ)
