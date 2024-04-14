@@ -35,17 +35,17 @@ definicoes_globais: definicao_global definicoes_globais | ;
 
 definicao_global: declaracao_variavel_externa | definicao_de_funcao;
 
-declaracao_variavel_externa: tipo especificacao_variaveis ';';
+declaracao_variavel_externa: tipo especificacao_variaveis ',';
 
-especificacao_variaveis: TK_IDENTIFICADOR | TK_IDENTIFICADOR ',' especificacao_variaveis;
+especificacao_variaveis: TK_IDENTIFICADOR | TK_IDENTIFICADOR ';' especificacao_variaveis;
 
-definicao_de_funcao: estrutura_funcao corpo_funcao;
+definicao_de_funcao: cabecalho_funcao corpo_funcao;
 
-estrutura_funcao: tipo TK_IDENTIFICADOR '(' argumentos_funcao ')';
+cabecalho_funcao: '(' argumentos_funcao ')' TK_OC_OR tipo '/' TK_IDENTIFICADOR;
 
 argumentos_funcao: lista_parametros | ;
 
-lista_parametros: parametro | parametro ',' lista_parametros;
+lista_parametros: parametro | parametro ';' lista_parametros;
 
 parametro: tipo TK_IDENTIFICADOR;
 
@@ -55,7 +55,7 @@ corpo_funcao: bloco_instrucoes;
 
 bloco_instrucoes: '{' sequencia_comandos '}' ;
 
-sequencia_comandos: instrucao_simples ';' sequencia_comandos | instrucao_simples ';' ;
+sequencia_comandos: instrucao_simples ',' sequencia_comandos | instrucao_simples ',' ;
 
 instrucao_simples: declaracao_variavel_interna 
                  | atribuicao
@@ -71,7 +71,7 @@ invocacao_funcao: TK_IDENTIFICADOR '(' lista_argumentos_funcao ')';
 
 declaracao_variavel_interna: tipo especificacao_variaveis_internas;
 
-especificacao_variaveis_internas: nome_variavel_inicial ',' especificacao_variaveis_internas | nome_variavel_inicial;
+especificacao_variaveis_internas: nome_variavel_inicial ';' especificacao_variaveis_internas | nome_variavel_inicial;
                                
 nome_variavel_inicial: TK_IDENTIFICADOR TK_OC_EQ expressao
                       | TK_IDENTIFICADOR
@@ -87,7 +87,7 @@ bloco_while: TK_PR_WHILE '(' expressao ')' bloco_instrucoes ;
 
 argumento_funcao: expressao;
 
-lista_argumentos_funcao: argumento_funcao ',' lista_argumentos_funcao | argumento_funcao;
+lista_argumentos_funcao: argumento_funcao ';' lista_argumentos_funcao | argumento_funcao;
 
 argumentos_funcao: lista_argumentos_funcao ;
 
