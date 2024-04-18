@@ -55,14 +55,14 @@ corpo_funcao: bloco_instrucoes;
 
 bloco_instrucoes: '{' sequencia_comandos '}' ;
 
-sequencia_comandos: instrucao_simples ',' sequencia_comandos | instrucao_simples ',' ;
+sequencia_comandos: instrucao_simples sequencia_comandos | instrucao_simples ;
 
-instrucao_simples: declaracao_variavel_interna 
-                 | atribuicao
-                 | retorno_funcao
+instrucao_simples: declaracao_variavel_interna ','
+                 | atribuicao ','
+                 | retorno_funcao ','
                  | estrutura_condicional 
                  | bloco_while
-                 | invocacao_funcao
+                 | invocacao_funcao ','
                  ;
 
 atribuicao: TK_IDENTIFICADOR '=' expressao;
@@ -91,16 +91,17 @@ lista_argumentos_funcao: argumento_funcao ';' lista_argumentos_funcao | argument
 
 argumentos_funcao: lista_argumentos_funcao ;
 
-expressao: expressao_prec7;
+expressao: expressao TK_OC_OR expressao2 | expressao2 ;
+expressao2: expressao2 TK_OC_AND expressao3 | expressao3 ;
+expressao3: expressao3 operador_bin_prec5 expressao4 | expressao4 ;
+expressao4: expressao4 operador_bin_prec4 expressao5 | expressao5 ;
+expressao5: expressao5 operador_bin_prec3 expressao6 | expressao6 ;
+expressao6: expressao6 operador_bin_prec2 expressao7 | expressao7 ;
+expressao7: '-' expressao8 | '!' expressao8 | expressao8 ;
+expressao8: expressao_terminal | expressao9 ;
+expressao9: '(' expressao ')' ;
 
-expressao_prec7: expressao_prec6 | expressao_bin_or;
-expressao_prec6: expressao_prec5 | expressao_bin_and;
-expressao_prec5: expressao_prec4 | expressao_bin_eq;
-expressao_prec4: expressao_prec3 | expressao_bin_compare;
-expressao_prec3: expressao_prec2 | expressao_bin_aritm;
-expressao_prec2: expressao_prec1 | expressao_bin_mult;
-expressao_prec1: expressao_prec0 | expressao_unaria;
-expressao_prec0: '(' expressao ')' | expressao_terminal;
+
 expressao_terminal: TK_IDENTIFICADOR
 	| invocacao_funcao
 	| literal 
@@ -112,23 +113,13 @@ literal:  TK_LIT_TRUE
              | TK_LIT_INT
              ;
 
-expressao_unaria: '-' expressao_terminal | '!' expressao_terminal;
-
-expressao_bin_mult: expressao_terminal operador_bin_prec2 expressao_terminal;
 operador_bin_prec2: '*' | '/' | '%';
 
-expressao_bin_aritm: expressao_terminal operador_bin_prec3 expressao_terminal;
 operador_bin_prec3: '+' | '-';
 
-expressao_bin_compare: expressao_terminal operador_bin_prec4 expressao_terminal;
 operador_bin_prec4: '<' | '>' | TK_OC_LE | TK_OC_GE;
 
-expressao_bin_eq: expressao_terminal operador_bin_prec5 expressao_terminal;
 operador_bin_prec5: TK_OC_EQ | TK_OC_NE;
-
-expressao_bin_and: expressao_terminal TK_OC_AND expressao_terminal;
-
-expressao_bin_or: expressao_terminal TK_OC_OR expressao_terminal;
 
 %%
 
