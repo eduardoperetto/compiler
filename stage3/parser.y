@@ -1,4 +1,12 @@
 %{
+/**
+* Projeto Compiladores INF01147 2024/1
+* Alunos: 
+* Eduardo Raupp Peretto - 00313439
+* João Pedro Alves Liz - 00333681
+*
+**/
+
 #include "tree.h"
 
 int yylex(void);
