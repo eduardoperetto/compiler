@@ -1,0 +1,7 @@
+int a,
+() | bool / main { 
+    int a, 
+    a = 1, 
+    if (b) { return b, }
+    return myfunction (c), 
+}
