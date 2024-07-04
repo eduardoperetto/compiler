@@ -46,6 +46,7 @@ clean:
 	rm -f $(ODIR)/*.o *~ core $(INCDIR)/*~ $(ODIR)/lex.yy.c $(ODIR)/parser.tab.c $(ODIR)/parser.tab.h ./etapa3 ./bison_output
 
 tar:
+	@echo "REMEMBER TO SET DEBUG TO 0"
 	rm -f ./etapa3.tgz
 	tar cvzf etapa3.tgz .
 
