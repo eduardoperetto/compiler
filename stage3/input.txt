@@ -2,6 +2,6 @@ int a,
 () | bool / main { 
     int a, 
     a = 1, 
-    if (b) { return b, }
+    if (b) { }
     return myfunction (c), 
 }

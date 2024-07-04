@@ -121,23 +121,24 @@ lista_parametros: parametro { $$ = $1; prt_dbg("lista_parametros"); }
 
 parametro: tipo TK_IDENTIFICADOR { $$ = cria_nodo($2); prt_dbg("parametro"); };
 
-tipo: TK_PR_INT { prt_dbg("tipo"); }
-	| TK_PR_FLOAT { prt_dbg("tipo"); }
-	| TK_PR_BOOL { prt_dbg("tipo"); };
+tipo: TK_PR_INT { prt_dbg("tipo (int)"); }
+	| TK_PR_FLOAT { prt_dbg("tipo (float)"); }
+	| TK_PR_BOOL { prt_dbg("tipo (bool)"); };
 
 corpo_funcao: bloco_instrucoes { $$ = $1; prt_dbg("corpo_funcao"); } ;
 
 bloco_instrucoes: '{' sequencia_comandos '}' { $$ = $2; prt_dbg("bloco_instrucoes"); } ;
+	| '{' '}' { $$ = NULL; prt_dbg("bloco_instrucoes (empty)"); } ;
 
 sequencia_comandos: instrucao_simples sequencia_comandos { $$ = $1; adiciona_filho($1,$2); prt_dbg("sequencia_comandos"); }
 	| instrucao_simples { $$ = $1; prt_dbg("sequencia_comandos"); } ;
 
-instrucao_simples: declaracao_variavel_interna ',' { $$ = $1; prt_dbg("instrucao_simples"); }
-	| atribuicao ','  { $$ = $1; prt_dbg("instrucao_simples"); }
-	| retorno_funcao ',' { $$ = $1; prt_dbg("instrucao_simples"); }
-	| estrutura_condicional  { $$ = $1; prt_dbg("instrucao_simples"); }
-	| bloco_while { $$ = $1; prt_dbg("instrucao_simples"); }
-	| invocacao_funcao ',' { $$ = $1; prt_dbg("instrucao_simples"); }; 
+instrucao_simples: declaracao_variavel_interna ',' { $$ = $1; prt_dbg("instrucao_simples (declaracao_variavel_interna)"); }
+	| atribuicao ','  { $$ = $1; prt_dbg("instrucao_simples (atribuicao)"); }
+	| retorno_funcao ',' { $$ = $1; prt_dbg("instrucao_simples (retorno_funcao)"); }
+	| estrutura_condicional  { $$ = $1; prt_dbg("instrucao_simples (estrutura_condicional)"); }
+	| bloco_while { $$ = $1; prt_dbg("instrucao_simples (bloco_while)"); }
+	| invocacao_funcao ',' { $$ = $1; prt_dbg("instrucao_simples (invocacao_funcao)"); };
 
 atribuicao: TK_IDENTIFICADOR '=' expressao { $$ = cria_nodo($2); adiciona_filho($$, cria_nodo($1)); adiciona_filho($$, $3); prt_dbg("atribuicao"); };
 
@@ -191,15 +192,15 @@ expressao8: expressao_terminal { $$ = $1; prt_dbg("expressao8"); }
 	| expressao9 { $$ = $1; prt_dbg("expressao8"); };
 expressao9: '(' expressao ')'  { $$ = $2; prt_dbg("expressao9"); };
 
-expressao_terminal: TK_IDENTIFICADOR { $$ = cria_nodo($1); prt_dbg("expressao_terminal"); }
-	| invocacao_funcao { $$ = $1; prt_dbg("expressao_terminal"); }
-	| literal  { $$ = $1; prt_dbg("expressao_terminal"); }
-    ;  
+expressao_terminal: TK_IDENTIFICADOR { $$ = cria_nodo($1); prt_dbg("expressao_terminal (identificador)"); }
+	| invocacao_funcao { $$ = $1; prt_dbg("expressao_terminal (invocacao_funcao)"); }
+	| literal  { $$ = $1; prt_dbg("expressao_terminal (literal)"); }
+    ;
 
-literal:  TK_LIT_TRUE { $$ = cria_nodo($1); prt_dbg("literal"); }
-	| TK_LIT_FALSE { $$ = cria_nodo($1); prt_dbg("literal"); }
-	| TK_LIT_FLOAT  { $$ = cria_nodo($1); prt_dbg("literal"); }
-	| TK_LIT_INT { $$ = cria_nodo($1); prt_dbg("literal"); };
+literal:  TK_LIT_TRUE { $$ = cria_nodo($1); prt_dbg("literal (TK_LIT_TRUE)"); }
+	| TK_LIT_FALSE { $$ = cria_nodo($1); prt_dbg("literal (TK_LIT_FALSE)"); }
+	| TK_LIT_FLOAT  { $$ = cria_nodo($1); prt_dbg("literal (TK_LIT_FLOAT)"); }
+	| TK_LIT_INT { $$ = cria_nodo($1); prt_dbg("literal (TK_LIT_INT)"); };
 
 operador_bin_prec2: '*' { $$ = cria_nodo($1); prt_dbg("operador_bin_prec2"); }
 	| '/' { $$ = cria_nodo($1); prt_dbg("operador_bin_prec2"); }

@@ -48,3 +48,7 @@ clean:
 tar:
 	rm -f ./etapa3.tgz
 	tar cvzf etapa3.tgz .
+
+dot:
+	rm -f saida.dot
+	./etapa3 | ./output2dot.sh < input.txt > saida.dot
