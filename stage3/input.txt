@@ -3,5 +3,11 @@ int a,
     int a, 
     a = 1, 
     if (b) { }
+    if (a <= b & b == a | a == c) {
+        while (a < 3) {
+            a = a + 1,
+        }
+        float c; d,
+    }
     return myfunction (c), 
 }
