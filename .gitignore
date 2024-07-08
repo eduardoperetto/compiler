@@ -1,2 +1,8 @@
 */bison_output
 **.tgz
+**.o
+*/lex.yy.c
+*/etapa*
+*/parser.tab*
+**.dot
+*/entrega*
