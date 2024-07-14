@@ -97,13 +97,24 @@ void prt_dbg(char* rule) {
 
 programa: definicoes_globais { arvore = $$; prt_dbg("programa"); };
 
-definicoes_globais: definicao_global definicoes_globais { $$ = $1; adiciona_filho($$, $2); prt_dbg("definicoes_globais"); }
-	| { $$ = NULL; };
+definicoes_globais: definicao_global definicoes_globais {
+        if ($1 != NULL) {
+            if ($2 != NULL) {
+                $$ = $1;
+                adiciona_filho($$, $2);
+            } else {
+                $$ = $1;
+            }
+        } else {
+            $$ = $2;
+        };
+		prt_dbg("definicoes_globais"); }
+	| { $$ = NULL; prt_dbg("definicoes_globais vazia"); };
 
-definicao_global: declaracao_variavel_externa { $$ = $1; prt_dbg("definicao_global"); }
+definicao_global: declaracao_variavel_externa { $$ = NULL; prt_dbg("definicao_global"); }
 | definicao_de_funcao { $$ = $1; prt_dbg("definicao_global"); };
 
-declaracao_variavel_externa: tipo especificacao_variaveis ',' { $$ = $2; };
+declaracao_variavel_externa: tipo especificacao_variaveis ',' { };
 
 especificacao_variaveis: TK_IDENTIFICADOR { $$ = cria_nodo($1); }
 	| TK_IDENTIFICADOR ';' especificacao_variaveis { $$ = cria_nodo($1); adiciona_filho($$, $3); };
@@ -129,27 +140,41 @@ corpo_funcao: bloco_instrucoes { $$ = $1; prt_dbg("corpo_funcao"); } ;
 bloco_instrucoes: '{' sequencia_comandos '}' { $$ = $2; prt_dbg("bloco_instrucoes"); } ;
 	| '{' '}' { $$ = NULL; prt_dbg("bloco_instrucoes (empty)"); } ;
 
-sequencia_comandos: instrucao_simples sequencia_comandos { $$ = $1; adiciona_filho($1,$2); prt_dbg("sequencia_comandos"); }
-	| instrucao_simples { $$ = $1; prt_dbg("sequencia_comandos"); } ;
+sequencia_comandos: instrucao_simples sequencia_comandos {
+        if ($1 != NULL) {
+            if ($2 != NULL) {
+                $$ = $1;
+                adiciona_filho($$, $2);
+            } else {
+                $$ = $1;
+            }
+        } else {
+            $$ = $2;
+        }
+        prt_dbg("sequencia_comandos");
+    }
+	| instrucao_simples { if ($1 != NULL) { $$ = $1; }; prt_dbg("sequencia_comandos"); } ;
 
-instrucao_simples: declaracao_variavel_interna ',' { $$ = $1; prt_dbg("instrucao_simples (declaracao_variavel_interna)"); }
+instrucao_simples: declaracao_variavel_interna ',' { $$ = NULL; prt_dbg("instrucao_simples (declaracao_variavel_interna)"); }
 	| atribuicao ','  { $$ = $1; prt_dbg("instrucao_simples (atribuicao)"); }
 	| retorno_funcao ',' { $$ = $1; prt_dbg("instrucao_simples (retorno_funcao)"); }
 	| estrutura_condicional  { $$ = $1; prt_dbg("instrucao_simples (estrutura_condicional)"); }
 	| bloco_while { $$ = $1; prt_dbg("instrucao_simples (bloco_while)"); }
 	| invocacao_funcao ',' { $$ = $1; prt_dbg("instrucao_simples (invocacao_funcao)"); };
+	| bloco_instrucoes { $$ = $1; prt_dbg("instrucao_simples (bloco_instrucoes)"); };
+	| ',' { $$ = NULL; prt_dbg("instrucao_simples (apenas vírgula)"); };
 
 atribuicao: TK_IDENTIFICADOR '=' expressao { $$ = cria_nodo($2); adiciona_filho($$, cria_nodo($1)); adiciona_filho($$, $3); prt_dbg("atribuicao"); };
 
-invocacao_funcao: TK_IDENTIFICADOR '(' lista_argumentos_funcao ')' { $$ = cria_nodo(cria_valor_lexico("call")); adiciona_filho($$, cria_nodo($1)); prt_dbg("invocacao_funcao"); } ;
+invocacao_funcao: TK_IDENTIFICADOR '(' lista_argumentos_funcao ')' { $$ = cria_nodo(cria_call($1)); adiciona_filho($$, $3); prt_dbg("invocacao_funcao"); } ;
 
-declaracao_variavel_interna: tipo especificacao_variaveis_internas { $$ = $2; prt_dbg("declaracao_variavel_interna"); };
+declaracao_variavel_interna: tipo especificacao_variaveis_internas { prt_dbg("declaracao_variavel_interna"); };
 
-especificacao_variaveis_internas: nome_variavel_inicial ';' especificacao_variaveis_internas { $$ = $1; adiciona_filho($$, $3); prt_dbg("especificacao_variaveis_internas"); }
-	| nome_variavel_inicial { $$ = $1; prt_dbg("especificacao_variaveis_internas"); };
+especificacao_variaveis_internas: nome_variavel_inicial ';' especificacao_variaveis_internas { prt_dbg("especificacao_variaveis_internas"); }
+	| nome_variavel_inicial { prt_dbg("especificacao_variaveis_internas"); };
                                
-nome_variavel_inicial: TK_IDENTIFICADOR TK_OC_EQ expressao { $$ = cria_nodo($2); adiciona_filho($$, cria_nodo($1)); adiciona_filho($$, $3); prt_dbg("nome_variavel_inicial"); }
-	| TK_IDENTIFICADOR { $$ = cria_nodo($1); prt_dbg("nome_variavel_inicial"); }
+nome_variavel_inicial: TK_IDENTIFICADOR TK_OC_EQ expressao { prt_dbg("nome_variavel_inicial"); }
+	| TK_IDENTIFICADOR { prt_dbg("nome_variavel_inicial"); }
                       ;
 
 retorno_funcao: TK_PR_RETURN expressao { $$ = cria_nodo(cria_valor_lexico("return")); adiciona_filho($$, $2); prt_dbg("retorno_funcao"); };

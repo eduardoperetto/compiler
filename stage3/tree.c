@@ -8,11 +8,30 @@
 
 valorLexico cria_valor_lexico(char *label) {
   valorLexico vl = {
-      .linha = 0,
-      .tipo = NONE,
-      .valorToken = NULL,
-      .label = label};
+    .linha = 0,
+    .tipo = NONE,
+    .valorToken = NULL,
+    .label = label
+  };
   return vl;
+}
+
+valorLexico cria_call(valorLexico func) {
+    int length = strlen("call ") + strlen(func.label) + 1;
+
+    valorLexico vl = {
+        .linha = 0,
+        .tipo = NONE,
+        .valorToken = NULL,
+        .label = (char *)malloc(length * sizeof(char))
+    };
+
+    if (vl.label != NULL) {
+        // Use sprintf to concatenate "call " and label directly into vl.label
+        sprintf(vl.label, "call %s", func.label);
+    }
+
+    return vl;
 }
 
 Nodo *cria_nodo(valorLexico valor) {
@@ -63,32 +82,45 @@ valorLexico atribui_yylval(char *yytext, TipoToken tipo, int num_lines) {
   return valor_lexico;
 }
 
-void print_node(Nodo *nodo) {
-  if (nodo && nodo->valor_lexico.label) {
-    printf("%p [label=\"%s\"];\n", (void *)nodo, nodo->valor_lexico.label);
-  } else {
-    printf("%p [label=\"\"];\n", (void *)nodo);
-  }
+void print_node_label(Nodo *nodo) {
+    if (nodo && nodo->valor_lexico.label) {
+        printf("%p [label=\"%s\"];\n", (void *)nodo, nodo->valor_lexico.label);
+    } else {
+        printf("%p [label=\"\"];\n", (void *)nodo);
+    }
 }
 
-void print_tree(Nodo *raiz) {
-  if (!raiz) {
-    return;
-  }
-
-  print_node(raiz);
-
-  for (int i = 0; i < raiz->num_filhos; i++) {
-    if (raiz->filhos[i]) {
-      printf("%p, %p\n", (void *)raiz, (void *)raiz->filhos[i]);
-      print_tree(raiz->filhos[i]);
+void print_tree_labels(Nodo *raiz) {
+    if (!raiz) {
+        return;
     }
-  }
+
+    print_node_label(raiz);
+
+    for (int i = 0; i < raiz->num_filhos; i++) {
+        if (raiz->filhos[i]) {
+            print_tree_labels(raiz->filhos[i]);
+        }
+    }
+}
+
+void print_node_addresses(Nodo *raiz) {
+    if (!raiz) {
+        return;
+    }
+
+    for (int i = 0; i < raiz->num_filhos; i++) {
+        if (raiz->filhos[i]) {
+            printf("%p, %p\n", (void *)raiz, (void *)raiz->filhos[i]);
+            print_node_addresses(raiz->filhos[i]);
+        }
+    }
 }
 
 void exporta(void *arvore) {
   Nodo *nodo_arvore;
   nodo_arvore = (Nodo *)arvore;
-  print_tree(nodo_arvore);
+  print_node_addresses(nodo_arvore);
+  print_tree_labels(nodo_arvore);
   return;
 }

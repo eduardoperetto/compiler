@@ -32,6 +32,7 @@ typedef struct Nodo {
 valorLexico atribui_yylval(char *yytext, TipoToken tipo, int num_lines);
 
 Nodo* cria_nodo(valorLexico valor);
+valorLexico cria_call(valorLexico label);
 valorLexico cria_valor_lexico(char* label);
 void adiciona_filho(Nodo *pai, Nodo *filho);
 void print_tree(Nodo *raiz);
