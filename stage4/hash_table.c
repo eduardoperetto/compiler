@@ -27,21 +27,22 @@ HashTable* createTable() {
   return newTable;
 }
 
-Identifier* createIdentifier(const char* name, TipoToken type) {
+Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction) {
   Identifier* newIdentifier = (Identifier*)malloc(sizeof(Identifier));
   strcpy(newIdentifier->name, name);
   newIdentifier->type = type;
+  newIdentifier->isFunction = isFunction;
   newIdentifier->initialized = false;
   newIdentifier->next = NULL;
   return newIdentifier;
 }
 
-void addIdentifier(HashTable* table, const char* name, TipoToken type) {
+void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction) {
   if (table == NULL) {
     table = createTable();
   }
   unsigned int index = hash(name);
-  Identifier* newIdentifier = createIdentifier(name, type);
+  Identifier* newIdentifier = createIdentifier(name, type, isFunction);
   if (table->table[index] == NULL) {
     table->table[index] = newIdentifier;
   } else {
@@ -96,11 +97,8 @@ void printTable(HashTable* table) {
     while (current != NULL) {
       const char* tipoStr = tipoTokenToString(current->type);
       printf("Name: %s, Type: %s, ", current->name, tipoStr);
-      if (current->initialized) {
-        printf("Initialized: True, ");
-      } else {
-        printf("Initialized: False, ");
-      }
+      printf("IsFunction: %s, ", current->isFunction ? "true" : "false");
+      printf("Initialized: %s, ", current->initialized ? "true" : "false");
       switch (current->type) {
         case BOOL:
           printf("Value: %d\n", current->value.b_val);

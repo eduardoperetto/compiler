@@ -130,11 +130,11 @@ definicao_global: declaracao_variavel_externa { $$ = NULL; prt_dbg("definicao_gl
 
 declaracao_variavel_externa: tipo especificacao_variaveis ',' { 
 	HashTable* topTable = getTop(&tableStack);
-	addIdentifier(topTable, ($2->valor_lexico).label, $1);
+	addIdentifier(topTable, ($2->valor_lexico).label, $1, false);
 
 	for (int i = 0; i < $2->num_filhos; i++) {
         if ($2->filhos[i]) {
-			addIdentifier(topTable, (($2->filhos[i])->valor_lexico).label, $1);
+			addIdentifier(topTable, (($2->filhos[i])->valor_lexico).label, $1, false);
         }
     }
 };
@@ -147,7 +147,7 @@ definicao_de_funcao: cabecalho_funcao corpo_funcao { $$ = $1; adiciona_filho($$,
 cabecalho_funcao: '(' argumentos_funcao ')' TK_OC_OR tipo '/' TK_IDENTIFICADOR { 
 	$$ = cria_nodo_v2($7, $5); 
 	HashTable* topTable = getTop(&tableStack);
-	addIdentifier(topTable, $7.label, $5);
+	addIdentifier(topTable, $7.label, $5, true);
 	prt_dbg("cabecalho_funcao"); 
 };
 

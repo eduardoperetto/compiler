@@ -10,6 +10,7 @@
 typedef struct Identifier {
   char name[50];
   bool initialized;
+  bool isFunction;
   TipoToken type;
   Value value;
   struct Identifier* next;
@@ -29,7 +30,7 @@ typedef struct {
 } HashTableStack;
 
 HashTable* createTable();
-void addIdentifier(HashTable* table, const char* name, TipoToken type);
+void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction);
 void updateIdentifier(HashTable* table, const char* name, Value newValue);
 Identifier* getIdentifier(HashTable* table, const char* name);
 void freeTable(HashTable* table);
