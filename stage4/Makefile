@@ -14,7 +14,7 @@ LIBS=-lm -lfl
 _DEPS = parser.tab.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o lex.yy.o parser.tab.o tree.o
+_OBJ = main.o lex.yy.o parser.tab.o tree.o hash_table.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(ODIR)/%.c $(DEPS)
