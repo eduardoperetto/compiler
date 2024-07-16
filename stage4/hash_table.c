@@ -72,6 +72,10 @@ Identifier* getIdentifier(HashTable* table, const char* name) {
   Identifier* current = table->table[index];
   while (current != NULL) {
     if (strcmp(current->name, name) == 0) {
+      if (!(current->initialized)) {
+        printf("[ERRO] Variável '%s' utilizada antes de ser inicializada.\n", current->name);
+        exit(-1);
+      }
       return current;
     }
     current = current->next;
@@ -92,9 +96,11 @@ void freeTable(HashTable* table) {
 }
 
 void printTable(HashTable* table) {
+  bool allIsNull = true;
   for (int i = 0; i < TABLE_SIZE; i++) {
     Identifier* current = table->table[i];
     while (current != NULL) {
+      allIsNull = false;
       const char* tipoStr = tipoTokenToString(current->type);
       printf("Name: %s, Type: %s, ", current->name, tipoStr);
       printf("IsFunction: %s, ", current->isFunction ? "true" : "false");
@@ -112,6 +118,9 @@ void printTable(HashTable* table) {
       }
       current = current->next;
     }
+  }
+  if (allIsNull) {
+    printf("Table has no symbols\n");
   }
 }
 
@@ -132,6 +141,11 @@ void addOnTop(HashTableStack* stack, HashTable* hashTable) {
   StackNode* stackNode = createStackNode(hashTable);
   stackNode->next = stack->top;
   stack->top = stackNode;
+}
+
+void createTableOnTop(HashTableStack* stack) {
+  HashTable* newTable = createTable();
+  addOnTop(stack, newTable);
 }
 
 HashTable* getTop(HashTableStack** stack) {
@@ -171,4 +185,52 @@ void freeStack(HashTableStack* stack) {
   while (stack->top != NULL) {
     dropTop(stack);
   }
+}
+
+Nodo* getNodeFromId(HashTableStack* stack, char* name) {
+  if (stack == NULL || stack->top == NULL) {
+    printf("[ERRO] Tabela de símbolos não inicializada ao tentar obter variável '%s'\n", name);
+    exit(-1);
+  }
+
+  StackNode* currentStackNode = stack->top;
+  Identifier* identifier = NULL;
+
+  while (currentStackNode != NULL) {
+    identifier = getIdentifier(currentStackNode->hashTable, name);
+    if (identifier != NULL) {
+      break;
+    }
+    currentStackNode = currentStackNode->next;
+  }
+
+  if (identifier == NULL) {
+    printf("[ERRO] Variável '%s' não encontrada.\n", name);
+    exit(-1);
+  }
+
+
+  Nodo* newNode = (Nodo*)malloc(sizeof(Nodo));
+  newNode->valor_lexico.linha = -1;
+  newNode->valor_lexico.tipo = identifier->type;
+  newNode->valor_lexico.label = strdup(identifier->name);
+  newNode->num_filhos = 0;
+  newNode->filhos = NULL;
+  newNode->tipo = identifier->type;
+
+  switch (identifier->type) {
+    case BOOL:
+      newNode->valor_lexico.valor.b_val = identifier->value.b_val;
+      break;
+    case FLOAT:
+      newNode->valor_lexico.valor.f_val = identifier->value.f_val;
+      break;
+    case INT:
+      newNode->valor_lexico.valor.i_val = identifier->value.i_val;
+      break;
+    default:
+      break;
+  }
+
+  return newNode;
 }

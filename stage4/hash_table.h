@@ -43,5 +43,7 @@ HashTable* getTop(HashTableStack** stack);
 HashTable* getLast(HashTableStack* stack);
 void dropTop(HashTableStack* stack);
 void freeStack(HashTableStack* stack);
+void createTableOnTop(HashTableStack* stack);
+Nodo* getNodeFromId(HashTableStack* stack, char* id);
 
 #endif

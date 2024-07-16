@@ -1,4 +1,4 @@
-# Eduardo Raupp Peretto (00313439) e João Pedro Linz
+# Eduardo Raupp Peretto (00313439)
 
 .PHONY: scanner
 

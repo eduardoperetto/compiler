@@ -5,7 +5,7 @@
 #include <string.h>
 
 #define DEBUG_PARSER 0
-#define DEBUG_NODES 1
+#define DEBUG_NODES 0
 #define PRINT_TREE_ADDR 0
 
 typedef enum tipoTk {
