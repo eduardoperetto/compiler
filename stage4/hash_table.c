@@ -32,12 +32,12 @@ Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction) 
   strcpy(newIdentifier->name, name);
   newIdentifier->type = type;
   newIdentifier->isFunction = isFunction;
-  newIdentifier->initialized = false;
+  newIdentifier->initialized = isFunction;
   newIdentifier->next = NULL;
   return newIdentifier;
 }
 
-void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction) {
+void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction, int line) {
   if (table == NULL) {
     table = createTable();
   }
@@ -46,15 +46,12 @@ void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFu
   if (table->table[index] == NULL) {
     table->table[index] = newIdentifier;
   } else {
-    Identifier* current = table->table[index];
-    while (current->next != NULL) {
-      current = current->next;
-    }
-    current->next = newIdentifier;
+    printf("[ERRO] Identificador '%s' já foi declarado (linha %d).\n", name, line);
+    exit(ERR_DECLARED);
   }
 }
 
-void updateIdentifier(HashTable* table, const char* name, Value newValue) {
+void updateIdentifier(HashTable* table, const char* name, Value newValue, int line) {
   unsigned int index = hash(name);
   Identifier* current = table->table[index];
   while (current != NULL) {
@@ -65,16 +62,22 @@ void updateIdentifier(HashTable* table, const char* name, Value newValue) {
     }
     current = current->next;
   }
+  printf("[ERRO] Variável '%s' não foi declarada (linha %d).\n", name, line);
+  exit(ERR_UNDECLARED);
 }
 
-Identifier* getIdentifier(HashTable* table, const char* name) {
+Identifier* getIdentifier(HashTable* table, const char* name, bool isFunction, int line) {
   unsigned int index = hash(name);
   Identifier* current = table->table[index];
   while (current != NULL) {
     if (strcmp(current->name, name) == 0) {
-      if (!(current->initialized)) {
-        printf("[ERRO] Variável '%s' utilizada antes de ser inicializada.\n", current->name);
-        exit(-1);
+      if ((current->isFunction) && !isFunction) {
+        printf("[ERRO] Identificador '%s' foi declarado como função, e não pode ser usado neste contexto (linha %d).\n", name, line);
+        exit(ERR_FUNCTION);
+      }
+      if (!(current->isFunction) && isFunction) {
+        printf("[ERRO] Identificador '%s' foi declarado como variável, e não pode ser usado neste contexto (linha %d).\n", name, line);
+        exit(ERR_VARIABLE);
       }
       return current;
     }
@@ -119,9 +122,11 @@ void printTable(HashTable* table) {
       current = current->next;
     }
   }
+  #ifdef DEBUG_PARSER
   if (allIsNull) {
     printf("Table has no symbols\n");
   }
+  #endif
 }
 
 /* Stack */
@@ -187,17 +192,17 @@ void freeStack(HashTableStack* stack) {
   }
 }
 
-Nodo* getNodeFromId(HashTableStack* stack, char* name) {
+Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line) {
   if (stack == NULL || stack->top == NULL) {
-    printf("[ERRO] Tabela de símbolos não inicializada ao tentar obter variável '%s'\n", name);
-    exit(-1);
+    printf("[ERRO] Variável '%s' não foi declarada (linha %d).\n", name, line);
+    exit(ERR_UNDECLARED);
   }
 
   StackNode* currentStackNode = stack->top;
   Identifier* identifier = NULL;
 
   while (currentStackNode != NULL) {
-    identifier = getIdentifier(currentStackNode->hashTable, name);
+    identifier = getIdentifier(currentStackNode->hashTable, name, isFunction, line);
     if (identifier != NULL) {
       break;
     }
@@ -205,8 +210,8 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name) {
   }
 
   if (identifier == NULL) {
-    printf("[ERRO] Variável '%s' não encontrada.\n", name);
-    exit(-1);
+    printf("[ERRO] Variável '%s' não foi declarada (linha %d).\n", name, line);
+    exit(ERR_UNDECLARED);
   }
 
 
@@ -233,4 +238,21 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name) {
   }
 
   return newNode;
+}
+
+void checkNature(HashTableStack* stack, char* name, bool isFunction, int line) {
+  StackNode* currentStackNode = stack->top;
+  Identifier* identifier = NULL;
+
+  while (currentStackNode != NULL) {
+    identifier = getIdentifier(currentStackNode->hashTable, name, isFunction, line);
+    if (identifier != NULL) {
+      break;
+    }
+    currentStackNode = currentStackNode->next;
+  }
+  if (identifier == NULL) {
+    printf("[ERRO] Identificador '%s' não foi declarado (linha %d).\n", name, line);
+    exit(ERR_UNDECLARED);
+  }
 }

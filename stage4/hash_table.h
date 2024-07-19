@@ -4,6 +4,7 @@
 
 #include "tree.h"
 #include "stdbool.h"
+#include "error.h"
 
 #define TABLE_SIZE 300
 
@@ -30,9 +31,9 @@ typedef struct {
 } HashTableStack;
 
 HashTable* createTable();
-void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction);
-void updateIdentifier(HashTable* table, const char* name, Value newValue);
-Identifier* getIdentifier(HashTable* table, const char* name);
+void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction, int line);
+void updateIdentifier(HashTable* table, const char* name, Value newValue, int line);
+Identifier* getIdentifier(HashTable* table, const char* name, bool isFunction, int line);
 void freeTable(HashTable* table);
 void printTable(HashTable* table);
 
@@ -44,6 +45,7 @@ HashTable* getLast(HashTableStack* stack);
 void dropTop(HashTableStack* stack);
 void freeStack(HashTableStack* stack);
 void createTableOnTop(HashTableStack* stack);
-Nodo* getNodeFromId(HashTableStack* stack, char* id);
+Nodo* getNodeFromId(HashTableStack* stack, char* id, bool isFunction, int line);
+void checkNature(HashTableStack* stack, char* name, bool isFunction, int line);
 
 #endif
