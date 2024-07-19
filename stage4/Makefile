@@ -52,4 +52,5 @@ tar:
 
 dot:
 	rm -f saida.dot
+	@$(MAKE) -s run
 	./etapa4 < input.txt | ./output2dot.sh > saida.dot

@@ -108,7 +108,9 @@ programa: definicoes_globais {
 	arvore = $$; 
 	prt_dbg("programa"); 
 	HashTable* topTable = getTop(&tableStack);
+	#if DEBUG_PARSER
 	printTable(topTable);
+	#endif
 };
 
 definicoes_globais: definicao_global definicoes_globais {
@@ -172,7 +174,9 @@ abre_escopo: '{' {
 
 fecha_escopo: '}' {
 	HashTable* topTable = getTop(&tableStack);
+	#if DEBUG_PARSER
 	printTable(topTable);
+	#endif
 	dropTop(tableStack);
 	prt_dbg("fecha escopo");
 }

@@ -122,7 +122,7 @@ void printTable(HashTable* table) {
       current = current->next;
     }
   }
-  #ifdef DEBUG_PARSER
+  #if DEBUG_PARSER
   if (allIsNull) {
     printf("Table has no symbols\n");
   }

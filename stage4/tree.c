@@ -165,9 +165,9 @@ void print_node_addresses(Nodo *raiz) {
 }
 
 void exporta(void *arvore) {
+  #if PRINT_TREE_ADDR
   Nodo *nodo_arvore;
   nodo_arvore = (Nodo *)arvore;
-  #if PRINT_TREE_ADDR
   print_node_addresses(nodo_arvore);
   print_tree_labels(nodo_arvore);
   #endif
