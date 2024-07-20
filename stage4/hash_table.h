@@ -12,6 +12,7 @@ typedef struct Identifier {
   char name[50];
   bool initialized;
   bool isFunction;
+  int declarationLine;
   TipoToken type;
   Value value;
   struct Identifier* next;
@@ -47,5 +48,10 @@ void freeStack(HashTableStack* stack);
 void createTableOnTop(HashTableStack* stack);
 Nodo* getNodeFromId(HashTableStack* stack, char* id, bool isFunction, int line);
 void checkNature(HashTableStack* stack, char* name, bool isFunction, int line);
+
+/* Debug*/
+void printErrorPrefix(int line);
+void printLine(int line);
+void printPrevDeclaration(int line);
 
 #endif

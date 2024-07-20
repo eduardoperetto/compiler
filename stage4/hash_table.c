@@ -27,12 +27,13 @@ HashTable* createTable() {
   return newTable;
 }
 
-Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction) {
+Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction, int line) {
   Identifier* newIdentifier = (Identifier*)malloc(sizeof(Identifier));
   strcpy(newIdentifier->name, name);
   newIdentifier->type = type;
   newIdentifier->isFunction = isFunction;
   newIdentifier->initialized = isFunction;
+  newIdentifier->declarationLine = line;
   newIdentifier->next = NULL;
   return newIdentifier;
 }
@@ -42,11 +43,13 @@ void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFu
     table = createTable();
   }
   unsigned int index = hash(name);
-  Identifier* newIdentifier = createIdentifier(name, type, isFunction);
+  Identifier* newIdentifier = createIdentifier(name, type, isFunction, line);
   if (table->table[index] == NULL) {
     table->table[index] = newIdentifier;
   } else {
-    printf("[ERRO] Identificador '%s' já foi declarado (linha %d).\n", name, line);
+    printErrorPrefix(line);
+    printf("Identificador '%s' já foi declarado.\n", name);
+    printPrevDeclaration((table->table[index])->declarationLine);
     exit(ERR_DECLARED);
   }
 }
@@ -62,7 +65,8 @@ void updateIdentifier(HashTable* table, const char* name, Value newValue, int li
     }
     current = current->next;
   }
-  printf("[ERRO] Variável '%s' não foi declarada (linha %d).\n", name, line);
+  printErrorPrefix(line);
+  printf("Variável '%s' não foi declarada.\n", name);
   exit(ERR_UNDECLARED);
 }
 
@@ -72,11 +76,15 @@ Identifier* getIdentifier(HashTable* table, const char* name, bool isFunction, i
   while (current != NULL) {
     if (strcmp(current->name, name) == 0) {
       if ((current->isFunction) && !isFunction) {
-        printf("[ERRO] Identificador '%s' foi declarado como função, e não pode ser usado neste contexto (linha %d).\n", name, line);
+        printErrorPrefix(line);
+        printf("Identificador '%s' foi declarado como função, e não pode ser usado neste contexto.\n", name);
+        printPrevDeclaration(current->declarationLine);
         exit(ERR_FUNCTION);
       }
       if (!(current->isFunction) && isFunction) {
-        printf("[ERRO] Identificador '%s' foi declarado como variável, e não pode ser usado neste contexto (linha %d).\n", name, line);
+        printErrorPrefix(line);
+        printf("Identificador '%s' foi declarado como variável, e não pode ser usado neste contexto.\n", name);
+        printPrevDeclaration(current->declarationLine);
         exit(ERR_VARIABLE);
       }
       return current;
@@ -194,7 +202,8 @@ void freeStack(HashTableStack* stack) {
 
 Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line) {
   if (stack == NULL || stack->top == NULL) {
-    printf("[ERRO] Variável '%s' não foi declarada (linha %d).\n", name, line);
+    printErrorPrefix(line);
+    printf("Variável '%s' não foi declarada.\n", name);
     exit(ERR_UNDECLARED);
   }
 
@@ -210,7 +219,8 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line
   }
 
   if (identifier == NULL) {
-    printf("[ERRO] Variável '%s' não foi declarada (linha %d).\n", name, line);
+    printErrorPrefix(line);
+    printf("Variável '%s' não foi declarada.\n", name);
     exit(ERR_UNDECLARED);
   }
 
@@ -252,7 +262,22 @@ void checkNature(HashTableStack* stack, char* name, bool isFunction, int line) {
     currentStackNode = currentStackNode->next;
   }
   if (identifier == NULL) {
-    printf("[ERRO] Identificador '%s' não foi declarado (linha %d).\n", name, line);
+    printErrorPrefix(line);
+    printf("Identificador '%s' não foi declarado.\n", name);
     exit(ERR_UNDECLARED);
   }
+}
+
+/* Debug functions */
+void printErrorPrefix(int line) {
+    printLine(line);
+    printf("\033[1;31m[Error] \033[0m");
+}
+
+void printPrevDeclaration(int line) {
+    printf("\033[0;36m(Previamente declarado na linha %d)\033[0m\n", line);
+}
+
+void printLine(int line) {
+    printf("\033[0;36m(Linha %d): \033[0m", line);
 }

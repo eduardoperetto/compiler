@@ -1,5 +1,5 @@
 #include <stdio.h>
-#define DEBUG_MAIN 0
+#define DEBUG_MAIN 1
 extern int yyparse(void);
 extern int yylex_destroy(void);
 void *arvore = NULL;
@@ -10,7 +10,7 @@ int main (int argc, char **argv)
   exporta (arvore);
   yylex_destroy();
   #if DEBUG_MAIN
-  printf("\nProgram returns %d\n", ret);
+  printf("Program returns %d\n", ret);
   #endif
   return ret;
 }
