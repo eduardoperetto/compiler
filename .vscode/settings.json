@@ -3,6 +3,8 @@
         "compare": "c",
         "type_traits": "c",
         "string.h": "c",
-        "stdbool.h": "c"
+        "stdbool.h": "c",
+        "stdio.h": "c",
+        "tree.h": "c"
     }
 }

@@ -38,19 +38,19 @@
 <COMMENT>.
 <COMMENT>"\n"                   
 
-"<="    { yylval.valor_lexico = atribui_yylval(yytext, OPERADOR_COMPOSTO, get_line_number()); return TK_OC_LE;}
-">="    { yylval.valor_lexico = atribui_yylval(yytext, OPERADOR_COMPOSTO, get_line_number()); return TK_OC_GE;}
-"=="    { yylval.valor_lexico = atribui_yylval(yytext, OPERADOR_COMPOSTO, get_line_number()); return TK_OC_EQ;}
-"!="    { yylval.valor_lexico = atribui_yylval(yytext, OPERADOR_COMPOSTO, get_line_number()); return TK_OC_NE;}
-"&" { yylval.valor_lexico = atribui_yylval(yytext, OPERADOR_COMPOSTO, get_line_number()); return TK_OC_AND;}
-"|" { yylval.valor_lexico = atribui_yylval(yytext, OPERADOR_COMPOSTO, get_line_number()); return TK_OC_OR;}
+"<="    { yylval.valor_lexico = atribui_yylval(yytext, NONE, get_line_number()); return TK_OC_LE;}
+">="    { yylval.valor_lexico = atribui_yylval(yytext, NONE, get_line_number()); return TK_OC_GE;}
+"=="    { yylval.valor_lexico = atribui_yylval(yytext, NONE, get_line_number()); return TK_OC_EQ;}
+"!="    { yylval.valor_lexico = atribui_yylval(yytext, NONE, get_line_number()); return TK_OC_NE;}
+"&" { yylval.valor_lexico = atribui_yylval(yytext, NONE, get_line_number()); return TK_OC_AND;}
+"|" { yylval.valor_lexico = atribui_yylval(yytext, NONE, get_line_number()); return TK_OC_OR;}
 
-[0-9]+ { yylval.valor_lexico = atribui_yylval(yytext, LIT_INTEIRO, get_line_number()); return TK_LIT_INT;}
-[0-9]*\.[0-9]+ { yylval.valor_lexico = atribui_yylval(yytext, TK_LIT_FLOAT, get_line_number()); return TK_LIT_FLOAT;}
-true { yylval.valor_lexico = atribui_yylval(yytext, LIT_BOOL, get_line_number()); return TK_LIT_TRUE;}
-false { yylval.valor_lexico = atribui_yylval(yytext, LIT_BOOL, get_line_number()); return TK_LIT_FALSE;}
+[0-9]+ { yylval.valor_lexico = atribui_yylval(yytext, INT, get_line_number()); return TK_LIT_INT;}
+[0-9]*\.[0-9]+ { yylval.valor_lexico = atribui_yylval(yytext, FLOAT, get_line_number()); return TK_LIT_FLOAT;}
+true { yylval.valor_lexico = atribui_yylval(yytext, BOOL, get_line_number()); return TK_LIT_TRUE;}
+false { yylval.valor_lexico = atribui_yylval(yytext, BOOL, get_line_number()); return TK_LIT_FALSE;}
 
-[_a-z][_a-z0-9]* { yylval.valor_lexico = atribui_yylval(yytext, IDENTIFICADOR, get_line_number()); return TK_IDENTIFICADOR;}
+[_a-z][_a-z0-9]* { yylval.valor_lexico = atribui_yylval(yytext, NONE, get_line_number()); return TK_IDENTIFICADOR;}
 
 . { TK_ERRO; }
 

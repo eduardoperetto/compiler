@@ -1,4 +1,4 @@
-# Eduardo Raupp Peretto (00313439) e João Pedro Linz
+# Eduardo Raupp Peretto (00313439)
 
 .PHONY: scanner
 
@@ -14,7 +14,7 @@ LIBS=-lm -lfl
 _DEPS = parser.tab.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o lex.yy.o parser.tab.o tree.o
+_OBJ = main.o lex.yy.o parser.tab.o tree.o hash_table.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(ODIR)/%.c $(DEPS)
@@ -52,4 +52,5 @@ tar:
 
 dot:
 	rm -f saida.dot
+	@$(MAKE) -s run
 	./etapa4 < input.txt | ./output2dot.sh > saida.dot

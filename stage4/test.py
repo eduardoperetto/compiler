@@ -7,7 +7,7 @@ import argparse
 def run_cmd(command):
     process = subprocess.run(command, shell=True)
     if process.returncode != 0:
-        raise Exception("Command failed")
+        raise Exception(f"Command failed (return code: {process.returncode})")
 
 def parse_digraph(file_path):
     with open(file_path, 'r') as file:
