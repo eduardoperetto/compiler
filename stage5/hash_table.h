@@ -42,10 +42,10 @@ StackNode* createStackNode(HashTable* hashTable);
 void initializeStack(HashTableStack* stack);
 void addOnTop(HashTableStack* stack, HashTable* hashTable);
 HashTable* getTop(HashTableStack** stack);
-HashTable* getLast(HashTableStack* stack);
+HashTable* getLast(HashTableStack** stack);
 void dropTop(HashTableStack* stack);
 void freeStack(HashTableStack* stack);
-void createTableOnTop(HashTableStack* stack);
+void createTableOnTop(HashTableStack** stack);
 Nodo* getNodeFromId(HashTableStack* stack, char* id, bool isFunction, int line);
 void checkNature(HashTableStack* stack, char* name, bool isFunction, int line);
 

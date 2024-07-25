@@ -1,5 +1,5 @@
 #include <stdio.h>
-#define DEBUG_MAIN 1
+#define DEBUG_MAIN 0
 extern int yyparse(void);
 extern int yylex_destroy(void);
 void *arvore = NULL;

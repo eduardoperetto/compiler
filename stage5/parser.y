@@ -88,6 +88,7 @@ void prt_dbg(char* rule) {
 %type <nodo> atribuicao
 %type <nodo> instrucao_simples
 %type <nodo> sequencia_comandos
+%type <nodo> bloco_instrucoes_funcao
 %type <nodo> bloco_instrucoes
 %type <nodo> corpo_funcao
 %type <nodo> lista_parametros
@@ -146,26 +147,42 @@ especificacao_variaveis: TK_IDENTIFICADOR { $$ = cria_nodo($1); }
 
 definicao_de_funcao: cabecalho_funcao corpo_funcao { $$ = $1; adiciona_filho($$, $2); prt_dbg("definicao_de_funcao"); };
 
-cabecalho_funcao: '(' argumentos_funcao ')' TK_OC_OR tipo '/' TK_IDENTIFICADOR { 
+cabecalho_funcao: abre_parametros_funcao argumentos_funcao ')' TK_OC_OR tipo '/' TK_IDENTIFICADOR { 
 	$$ = cria_nodo_v2($7, $5); 
-	HashTable* topTable = getTop(&tableStack);
-	addIdentifier(topTable, $7.label, $5, true, get_line_number());
+	HashTable* globalTable = getLast(&tableStack);
+	addIdentifier(globalTable, $7.label, $5, true, get_line_number());
 	prt_dbg("cabecalho_funcao"); 
 };
 
-argumentos_funcao: lista_parametros { $$ = $1; prt_dbg("argumentos_funcao"); } 
+abre_parametros_funcao: '(' {
+	createTableOnTop(&tableStack);
+	prt_dbg("abre_parametros_funcao"); 
+}
+
+argumentos_funcao: lista_parametros { 
+	$$ = $1;
+	prt_dbg("argumentos_funcao"); 
+} 
 	| { $$ = NULL; prt_dbg("argumentos_funcao"); };
 
 lista_parametros: parametro { $$ = $1; prt_dbg("lista_parametros"); }
 	| parametro ';' lista_parametros { $$ = $1; adiciona_filho($1,$3); prt_dbg("lista_parametros"); };
 
-parametro: tipo TK_IDENTIFICADOR { $$ = cria_nodo_v2($2, $1); prt_dbg("parametro"); };
+parametro: tipo TK_IDENTIFICADOR { 
+	$$ = cria_nodo_v2($2, $1); 
+	HashTable* topTable = getTop(&tableStack);
+	addIdentifier(topTable, $2.label, $1, false, get_line_number());
+	prt_dbg("parametro"); 
+};
 
 tipo: TK_PR_INT { $$ = INT; prt_dbg("tipo (int)"); }
 	| TK_PR_FLOAT { $$ = FLOAT ; prt_dbg("tipo (float)"); }
 	| TK_PR_BOOL { $$ = BOOL ; prt_dbg("tipo (bool)"); };
 
-corpo_funcao: bloco_instrucoes { $$ = $1; prt_dbg("corpo_funcao"); } ;
+corpo_funcao: bloco_instrucoes_funcao { $$ = $1; prt_dbg("corpo_funcao"); } ;
+
+bloco_instrucoes_funcao: '{' sequencia_comandos fecha_escopo { $$ = $2; prt_dbg("bloco_instrucoes"); } ;
+	| '{' '}' { $$ = NULL; prt_dbg("bloco_instrucoes (empty)"); } ;
 
 abre_escopo: '{' {
 	createTableOnTop(tableStack);

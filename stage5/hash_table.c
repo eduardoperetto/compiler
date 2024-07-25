@@ -156,9 +156,14 @@ void addOnTop(HashTableStack* stack, HashTable* hashTable) {
   stack->top = stackNode;
 }
 
-void createTableOnTop(HashTableStack* stack) {
+void createTableOnTop(HashTableStack** stack) {
+  if (*stack == NULL) {
+    *stack = (HashTableStack*)malloc(sizeof(HashTableStack));
+    initializeStack(*stack);
+    (*stack)->top = createStackNode(createTable());
+  }
   HashTable* newTable = createTable();
-  addOnTop(stack, newTable);
+  addOnTop(*stack, newTable);
 }
 
 HashTable* getTop(HashTableStack** stack) {
@@ -173,11 +178,13 @@ HashTable* getTop(HashTableStack** stack) {
   return (*stack)->top->hashTable;
 }
 
-HashTable* getLast(HashTableStack* stack) {
-  if (stack->top == NULL) {
-    return NULL;
+HashTable* getLast(HashTableStack** stack) {
+  if (*stack == NULL) {
+    *stack = (HashTableStack*)malloc(sizeof(HashTableStack));
+    initializeStack(*stack);
+    (*stack)->top = createStackNode(createTable());
   }
-  StackNode* current = stack->top;
+  StackNode* current = (*stack)->top;
   while (current->next != NULL) {
     current = current->next;
   }
