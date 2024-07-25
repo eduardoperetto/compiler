@@ -54,22 +54,6 @@ void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFu
   }
 }
 
-void updateIdentifier(HashTable* table, const char* name, Value newValue, int line) {
-  unsigned int index = hash(name);
-  Identifier* current = table->table[index];
-  while (current != NULL) {
-    if (strcmp(current->name, name) == 0) {
-      current->value = newValue;
-      current->initialized = true;
-      return;
-    }
-    current = current->next;
-  }
-  printErrorPrefix(line);
-  printf("Variável '%s' não foi declarada.\n", name);
-  exit(ERR_UNDECLARED);
-}
-
 Identifier* getIdentifier(HashTable* table, const char* name, bool isFunction, int line) {
   unsigned int index = hash(name);
   Identifier* current = table->table[index];
@@ -207,7 +191,18 @@ void freeStack(HashTableStack* stack) {
   }
 }
 
-Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line) {
+void updateIdentifier(HashTableStack* stack, const char* name, Value newValue, int line) {
+  unsigned int index = hash(name);
+  Identifier* identifier = findIdentifier(stack, name, false, line);
+  if (identifier == NULL) {
+    printErrorPrefix(line);
+    printf("Variável '%s' não foi declarada.\n", name);
+    exit(ERR_UNDECLARED);
+  }
+  identifier->value = newValue;
+}
+
+Identifier* findIdentifier(HashTableStack* stack, char* name, bool isFunction, int line) {
   if (stack == NULL || stack->top == NULL) {
     printErrorPrefix(line);
     printf("Variável '%s' não foi declarada.\n", name);
@@ -220,17 +215,21 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line
   while (currentStackNode != NULL) {
     identifier = getIdentifier(currentStackNode->hashTable, name, isFunction, line);
     if (identifier != NULL) {
-      break;
+      return identifier;
     }
     currentStackNode = currentStackNode->next;
   }
+  return NULL;
+}
+
+Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line) {
+  Identifier* identifier = findIdentifier(stack, name, isFunction, line);
 
   if (identifier == NULL) {
     printErrorPrefix(line);
     printf("Variável '%s' não foi declarada.\n", name);
     exit(ERR_UNDECLARED);
   }
-
 
   Nodo* newNode = (Nodo*)malloc(sizeof(Nodo));
   newNode->valor_lexico.linha = -1;

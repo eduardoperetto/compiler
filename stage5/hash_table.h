@@ -33,7 +33,6 @@ typedef struct {
 
 HashTable* createTable();
 void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction, int line);
-void updateIdentifier(HashTable* table, const char* name, Value newValue, int line);
 Identifier* getIdentifier(HashTable* table, const char* name, bool isFunction, int line);
 void freeTable(HashTable* table);
 void printTable(HashTable* table);
@@ -46,6 +45,8 @@ HashTable* getLast(HashTableStack** stack);
 void dropTop(HashTableStack* stack);
 void freeStack(HashTableStack* stack);
 void createTableOnTop(HashTableStack** stack);
+void updateIdentifier(HashTableStack* stack, const char* name, Value newValue, int line);
+Identifier* findIdentifier(HashTableStack* stack, char* name, bool isFunction, int line);
 Nodo* getNodeFromId(HashTableStack* stack, char* id, bool isFunction, int line);
 void checkNature(HashTableStack* stack, char* name, bool isFunction, int line);
 

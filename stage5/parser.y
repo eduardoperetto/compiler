@@ -185,7 +185,7 @@ bloco_instrucoes_funcao: '{' sequencia_comandos fecha_escopo { $$ = $2; prt_dbg(
 	| '{' '}' { $$ = NULL; prt_dbg("bloco_instrucoes (empty)"); } ;
 
 abre_escopo: '{' {
-	createTableOnTop(tableStack);
+	createTableOnTop(&tableStack);
 	prt_dbg("abre escopo");
 }
 
@@ -229,8 +229,7 @@ atribuicao: variavel '=' expressao {
 	$$ = cria_nodo($2); 
 	adiciona_filho($$, $1); 
 	adiciona_filho($$, $3);
-	HashTable* topTable = getTop(&tableStack);
-	updateIdentifier(topTable, ($1->valor_lexico).label, ($3->valor_lexico).valor, get_line_number());
+	updateIdentifier(tableStack, ($1->valor_lexico).label, ($3->valor_lexico).valor, get_line_number());
 	prt_dbg("atribuicao"); 
 };
 
