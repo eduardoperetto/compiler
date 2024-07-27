@@ -191,7 +191,7 @@ void freeStack(HashTableStack* stack) {
   }
 }
 
-void updateIdentifier(HashTableStack* stack, const char* name, Value newValue, int line) {
+void updateIdentifier(HashTableStack* stack, char* name, Value newValue, int line) {
   unsigned int index = hash(name);
   Identifier* identifier = findIdentifier(stack, name, false, line);
   if (identifier == NULL) {
