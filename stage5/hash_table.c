@@ -8,7 +8,18 @@
 HashTableStack* tableStack;
 HashTable* globalTable;
 
+static int last_table_offset = 0;
+
 /* Hash table */
+
+int get_size(TipoToken tipo) {
+    switch (tipo) {
+        case INT: return 4;
+        case FLOAT: return 8;
+        case BOOL: return 1;
+        case NONE: return 0;
+    }
+}
 
 // Gera um hash a partir do identificador ASCII
 unsigned int hash(const char* key) {
@@ -27,13 +38,14 @@ HashTable* createTable() {
   return newTable;
 }
 
-Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction, int line) {
+Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction, int line, int local_addr) {
   Identifier* newIdentifier = (Identifier*)malloc(sizeof(Identifier));
   strcpy(newIdentifier->name, name);
   newIdentifier->type = type;
   newIdentifier->isFunction = isFunction;
   newIdentifier->initialized = isFunction;
   newIdentifier->declarationLine = line;
+  newIdentifier->local_addr = local_addr;
   newIdentifier->next = NULL;
   return newIdentifier;
 }
@@ -43,7 +55,9 @@ void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFu
     table = createTable();
   }
   unsigned int index = hash(name);
-  Identifier* newIdentifier = createIdentifier(name, type, isFunction, line);
+  int local_addr = table->curr_offset;
+  table->curr_offset += get_size(type);
+  Identifier* newIdentifier = createIdentifier(name, type, isFunction, line, local_addr);
   if (table->table[index] == NULL) {
     table->table[index] = newIdentifier;
   } else {
@@ -100,6 +114,8 @@ void printTable(HashTable* table) {
       printf("Name: %s, Type: %s, ", current->name, tipoStr);
       printf("IsFunction: %s, ", current->isFunction ? "true" : "false");
       printf("Initialized: %s, ", current->initialized ? "true" : "false");
+      printf("LocalAddr: %d, ", current->local_addr);
+      printf("Function label: %s, ", current->isFunction ? current->func_label : "Null");
       switch (current->type) {
         case BOOL:
           printf("Value: %d\n", current->value.b_val);
@@ -114,6 +130,7 @@ void printTable(HashTable* table) {
       current = current->next;
     }
   }
+  printf("Table current offset: %d\n", table->curr_offset);
   #if DEBUG_PARSER
   if (allIsNull) {
     printf("Table has no symbols\n");
@@ -202,6 +219,17 @@ void updateIdentifier(HashTableStack* stack, char* name, Value newValue, int lin
   identifier->value = newValue;
 }
 
+void update_func_label(HashTableStack* stack, char* name, char *label) {
+  unsigned int index = hash(name);
+  Identifier* identifier = findIdentifier(stack, name, true, -1);
+  if (identifier == NULL) {
+    printErrorPrefix(-1);
+    printf("Erro interno (função não encontrada ao adicionar label).\n", name);
+    exit(ERR_UNDECLARED);
+  }
+  identifier->func_label = label;
+}
+
 Identifier* findIdentifier(HashTableStack* stack, char* name, bool isFunction, int line) {
   if (stack == NULL || stack->top == NULL) {
     printErrorPrefix(line);
@@ -236,6 +264,7 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line
   newNode->valor_lexico.tipo = identifier->type;
   newNode->valor_lexico.label = strdup(identifier->name);
   newNode->num_filhos = 0;
+  newNode->table_local_addr = identifier->local_addr;
   newNode->filhos = NULL;
   newNode->tipo = identifier->type;
 
@@ -272,6 +301,16 @@ void checkNature(HashTableStack* stack, char* name, bool isFunction, int line) {
     printf("Identificador '%s' não foi declarado.\n", name);
     exit(ERR_UNDECLARED);
   }
+}
+
+void update_last_offset(int offset) {
+  last_table_offset = offset;
+}
+
+int get_last_table_offset() {
+  int offset = last_table_offset;
+  last_table_offset = 0;
+  return offset;
 }
 
 /* Debug functions */

@@ -49,6 +49,9 @@ Nodo *cria_nodo_v2(valorLexico valor, TipoToken tipo) {
   novoNodo->filhos = NULL;
   novoNodo->num_filhos = 0;
   novoNodo->tipo = tipo;
+  novoNodo->table_local_addr = -1;
+  novoNodo->iloc_code = NULL;
+  novoNodo->temp_reg = NULL;
   prt_node(novoNodo);
   return novoNodo;
 }
@@ -58,9 +61,23 @@ Nodo *cria_nodo(valorLexico valor) {
   novoNodo->valor_lexico = valor;
   novoNodo->filhos = NULL;
   novoNodo->num_filhos = 0;
-  novoNodo->tipo = NONE;
+  novoNodo->table_local_addr = -1;
+  novoNodo->tipo = valor.tipo;
   prt_node(novoNodo);
   return novoNodo;
+}
+
+void assign_code(Nodo* node, ilocCode *code) {
+  if (node == NULL || code == NULL) return;
+  node->iloc_code = code;
+  #if DEBUG_ILOC
+  print_code(code);
+  #endif
+}
+
+void copy_code_and_free(Nodo* destiny, Nodo* source) {
+  destiny->iloc_code = source->iloc_code;
+  free(source->iloc_code);
 }
 
 void adiciona_filho(Nodo *pai, Nodo *filho) {
@@ -164,12 +181,12 @@ void print_node_addresses(Nodo *raiz) {
     }
 }
 
-void exporta(void *arvore) {
+void exporta(void *tree) {
   #if PRINT_TREE_ADDR
-  Nodo *nodo_arvore;
-  nodo_arvore = (Nodo *)arvore;
-  print_node_addresses(nodo_arvore);
-  print_tree_labels(nodo_arvore);
+  Nodo *nodo_tree;
+  nodo_tree = (Nodo *)tree;
+  print_node_addresses(nodo_tree);
+  print_tree_labels(nodo_tree);
   #endif
   return;
 }
@@ -183,6 +200,10 @@ const char* tipoTokenToString(TipoToken tipo) {
         case NONE: return "NONE";
         default: return "UNKNOWN";
     }
+}
+
+void print_node_code(Nodo* node) {
+  print_code(node->iloc_code);
 }
 
 void prt_node(void *ptr) {

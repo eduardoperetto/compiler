@@ -15,7 +15,7 @@ extern HashTable* globalTable;
 int yylex(void);
 void yyerror (char const *mensagem);
 int get_line_number(void);
-extern void *arvore;
+extern void *tree;
 
 #define YYDEBUG 1
 
@@ -105,7 +105,7 @@ void prt_dbg(char* rule) {
 %%
 
 programa: definicoes_globais { 
-	arvore = $$; 
+	tree = $$; 
 	prt_dbg("programa"); 
 	HashTable* topTable = getTop(&tableStack);
 	#if DEBUG_PARSER

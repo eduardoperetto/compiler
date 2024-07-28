@@ -15,11 +15,15 @@ typedef struct Identifier {
   int declarationLine;
   TipoToken type;
   Value value;
+  int local_addr;
+  char *func_label;
   struct Identifier* next;
 } Identifier;
 
 typedef struct HashTable {
   Identifier* table[TABLE_SIZE];
+  char *scope_name;
+  int curr_offset;
 } HashTable;
 
 typedef struct StackNode {
@@ -27,9 +31,11 @@ typedef struct StackNode {
     struct StackNode* next;
 } StackNode;
 
-typedef struct {
+typedef struct HashTableStack {
     StackNode* top;
 } HashTableStack;
+
+int get_size(TipoToken tipo);
 
 HashTable* createTable();
 void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction, int line);
@@ -47,8 +53,11 @@ void freeStack(HashTableStack* stack);
 void createTableOnTop(HashTableStack** stack);
 void updateIdentifier(HashTableStack* stack, char* name, Value newValue, int line);
 Identifier* findIdentifier(HashTableStack* stack, char* name, bool isFunction, int line);
+void update_func_label(HashTableStack* stack, char* name, char *label);
 Nodo* getNodeFromId(HashTableStack* stack, char* id, bool isFunction, int line);
 void checkNature(HashTableStack* stack, char* name, bool isFunction, int line);
+void update_last_offset(int offset);
+int get_last_table_offset();
 
 /* Debug*/
 void printErrorPrefix(int line);

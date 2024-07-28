@@ -5,6 +5,9 @@
         "string.h": "c",
         "stdbool.h": "c",
         "stdio.h": "c",
-        "tree.h": "c"
+        "tree.h": "c",
+        "stdlib.h": "c",
+        "iloc.h": "c",
+        "hash_table.h": "c"
     }
 }

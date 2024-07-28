@@ -8,6 +8,7 @@
 
 #include "tree.h"
 #include "hash_table.h"
+#include "iloc.h"
 
 extern HashTableStack* tableStack;
 extern HashTable* globalTable;
@@ -15,7 +16,7 @@ extern HashTable* globalTable;
 int yylex(void);
 void yyerror (char const *mensagem);
 int get_line_number(void);
-extern void *arvore;
+extern void *tree;
 
 #define YYDEBUG 1
 
@@ -106,12 +107,14 @@ void prt_dbg(char* rule) {
 %%
 
 programa: definicoes_globais { 
-	arvore = $$; 
+	tree = $$;
 	prt_dbg("programa"); 
-	HashTable* topTable = getTop(&tableStack);
+	encapsulate_program_code($$);
 	#if DEBUG_PARSER
+	HashTable* topTable = getTop(&tableStack);
 	printTable(topTable);
 	#endif
+	print_node_code($$);
 };
 
 definicoes_globais: definicao_global definicoes_globais {
@@ -119,6 +122,7 @@ definicoes_globais: definicao_global definicoes_globais {
             if ($2 != NULL) {
                 $$ = $1;
                 adiciona_filho($$, $2);
+				append_node_codes($$,$2);
             } else {
                 $$ = $1;
             }
@@ -145,9 +149,14 @@ declaracao_variavel_externa: tipo especificacao_variaveis ',' {
 especificacao_variaveis: TK_IDENTIFICADOR { $$ = cria_nodo($1); }
 	| TK_IDENTIFICADOR ';' especificacao_variaveis { $$ = cria_nodo($1); adiciona_filho($$, $3); };
 
-definicao_de_funcao: cabecalho_funcao corpo_funcao { $$ = $1; adiciona_filho($$, $2); prt_dbg("definicao_de_funcao"); };
+definicao_de_funcao: cabecalho_funcao corpo_funcao { 
+	gen_func_declaration($1, $2, tableStack);
+	$$ = $1;
+	adiciona_filho($$, $2);
+	prt_dbg("definicao_de_funcao");
+};
 
-cabecalho_funcao: abre_parametros_funcao argumentos_funcao ')' TK_OC_OR tipo '/' TK_IDENTIFICADOR { 
+cabecalho_funcao: abre_parametros_funcao argumentos_funcao ')' TK_OC_OR tipo '/' TK_IDENTIFICADOR {
 	$$ = cria_nodo_v2($7, $5); 
 	HashTable* globalTable = getLast(&tableStack);
 	addIdentifier(globalTable, $7.label, $5, true, get_line_number());
@@ -181,7 +190,10 @@ tipo: TK_PR_INT { $$ = INT; prt_dbg("tipo (int)"); }
 
 corpo_funcao: bloco_instrucoes_funcao { $$ = $1; prt_dbg("corpo_funcao"); } ;
 
-bloco_instrucoes_funcao: '{' sequencia_comandos fecha_escopo { $$ = $2; prt_dbg("bloco_instrucoes"); } ;
+bloco_instrucoes_funcao: '{' sequencia_comandos fecha_escopo { 
+	$$ = $2;
+	prt_dbg("bloco_instrucoes"); 
+} ;
 	| '{' '}' { $$ = NULL; prt_dbg("bloco_instrucoes (empty)"); } ;
 
 abre_escopo: '{' {
@@ -194,11 +206,16 @@ fecha_escopo: '}' {
 	#if DEBUG_PARSER
 	printTable(topTable);
 	#endif
+	update_last_offset(topTable->curr_offset);
 	dropTop(tableStack);
 	prt_dbg("fecha escopo");
 }
 
-bloco_instrucoes: abre_escopo sequencia_comandos fecha_escopo { $$ = $2; prt_dbg("bloco_instrucoes"); } ;
+bloco_instrucoes: abre_escopo sequencia_comandos fecha_escopo { 
+	$$ = $2;
+	copy_code_and_free($$, $2);
+	prt_dbg("bloco_instrucoes"); 
+} ;
 	| '{' '}' { $$ = NULL; prt_dbg("bloco_instrucoes (empty)"); } ;
 
 sequencia_comandos: instrucao_simples sequencia_comandos {
@@ -206,6 +223,7 @@ sequencia_comandos: instrucao_simples sequencia_comandos {
             if ($2 != NULL) {
                 $$ = $1;
                 adiciona_filho($$, $2);
+				append_node_codes($$, $2);
             } else {
                 $$ = $1;
             }
@@ -214,10 +232,18 @@ sequencia_comandos: instrucao_simples sequencia_comandos {
         }
         prt_dbg("sequencia_comandos");
     }
-	| instrucao_simples { if ($1 != NULL) { $$ = $1; }; prt_dbg("sequencia_comandos"); } ;
+	| instrucao_simples { 
+		if ($1 != NULL) { 
+			$$ = $1;
+		}; 
+		prt_dbg("sequencia_comandos"); 
+	} ;
 
 instrucao_simples: declaracao_variavel_interna ',' { $$ = NULL; prt_dbg("instrucao_simples (declaracao_variavel_interna)"); }
-	| atribuicao ','  { $$ = $1; prt_dbg("instrucao_simples (atribuicao)"); }
+	| atribuicao ','  { 
+		$$ = $1; 
+		prt_dbg("instrucao_simples (atribuicao)"); 
+	}
 	| retorno_funcao ',' { $$ = $1; prt_dbg("instrucao_simples (retorno_funcao)"); }
 	| estrutura_condicional  { $$ = $1; prt_dbg("instrucao_simples (estrutura_condicional)"); }
 	| bloco_while { $$ = $1; prt_dbg("instrucao_simples (bloco_while)"); }
@@ -227,9 +253,10 @@ instrucao_simples: declaracao_variavel_interna ',' { $$ = NULL; prt_dbg("instruc
 
 atribuicao: variavel '=' expressao { 
 	$$ = cria_nodo($2); 
-	adiciona_filho($$, $1); 
+	adiciona_filho($$, $1);
 	adiciona_filho($$, $3);
 	updateIdentifier(tableStack, ($1->valor_lexico).label, ($3->valor_lexico).valor, get_line_number());
+	gen_assignment($$, $1, $3);
 	prt_dbg("atribuicao"); 
 };
 
@@ -310,7 +337,8 @@ variavel: TK_IDENTIFICADOR {
 }
 
 expressao_terminal: variavel {
-	$$ = $1; 
+	$$ = $1;
+	gen_load_var($$);
 	prt_dbg("expressao_terminal (variavel)"); 
 }
 	| invocacao_funcao { $$ = $1; prt_dbg("expressao_terminal (invocacao_funcao)"); }
@@ -320,7 +348,7 @@ expressao_terminal: variavel {
 literal:  TK_LIT_TRUE { $$ = cria_nodo_v2($1, BOOL); prt_dbg("literal (TK_LIT_TRUE)"); }
 	| TK_LIT_FALSE { $$ = cria_nodo_v2($1, BOOL); prt_dbg("literal (TK_LIT_FALSE)"); }
 	| TK_LIT_FLOAT  { $$ = cria_nodo_v2($1, FLOAT); prt_dbg("literal (TK_LIT_FLOAT)"); }
-	| TK_LIT_INT { $$ = cria_nodo_v2($1, INT); prt_dbg("literal (TK_LIT_INT)"); };
+	| TK_LIT_INT { $$ = cria_nodo_v2($1, INT); gen_load_literal($$); prt_dbg("literal (TK_LIT_INT)"); };
 
 operador_bin_prec2: '*' { $$ = $1; prt_dbg("operador_bin_prec2"); }
 	| '/' { $$ = $1; prt_dbg("operador_bin_prec2"); }
