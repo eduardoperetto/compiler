@@ -38,6 +38,7 @@ typedef struct Nodo {
   int table_local_addr;
   ilocCode* iloc_code;
   char* temp_reg;
+  char* temp_reg_false;
   TipoToken tipo;
 } Nodo;
 

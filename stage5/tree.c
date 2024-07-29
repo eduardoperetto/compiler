@@ -52,6 +52,7 @@ Nodo *cria_nodo_v2(valorLexico valor, TipoToken tipo) {
   novoNodo->table_local_addr = -1;
   novoNodo->iloc_code = NULL;
   novoNodo->temp_reg = NULL;
+  novoNodo->temp_reg_false = NULL;
   prt_node(novoNodo);
   return novoNodo;
 }
@@ -63,6 +64,8 @@ Nodo *cria_nodo(valorLexico valor) {
   novoNodo->num_filhos = 0;
   novoNodo->table_local_addr = -1;
   novoNodo->tipo = valor.tipo;
+  novoNodo->temp_reg_false = NULL;
+  novoNodo->temp_reg = NULL;
   prt_node(novoNodo);
   return novoNodo;
 }

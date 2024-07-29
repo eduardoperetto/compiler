@@ -102,7 +102,7 @@ void gen_return(Nodo *return_node, Nodo *expr_node);
 void gen_bin_expr(Nodo *root, Nodo *arg1, Nodo *arg2);
 void gen_unit_expr(Nodo *root, Nodo *arg1);
 void gen_while(Nodo *root_while);
-void gen_if(Nodo *root_if);
+void gen_if(Nodo *root_if, Nodo* expr, Nodo *true_block, Nodo *else_block);
 void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTableStack *stack);
 void capture_params(Nodo* header, Nodo* params);
 void encapsulate_program_code(Nodo* program_node);

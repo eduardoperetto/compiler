@@ -307,7 +307,7 @@ estrutura_condicional: TK_PR_IF '(' expressao ')' bloco_instrucoes {
 	adiciona_filho($$, $3); 
 	adiciona_filho($$, $5); 
 	prt_dbg("estrutura_condicional"); 
-	gen_if($$);
+	gen_if($$, $3, $5, NULL);
 }
 	| TK_PR_IF '(' expressao ')' bloco_instrucoes TK_PR_ELSE bloco_instrucoes {
 		$$ = cria_nodo_v2(cria_valor_lexico("if"), $5->tipo);
@@ -315,7 +315,7 @@ estrutura_condicional: TK_PR_IF '(' expressao ')' bloco_instrucoes {
 		adiciona_filho($$, $5);
 		adiciona_filho($$, $7);
 		prt_dbg("estrutura_condicional");
-		gen_if($$);
+		gen_if($$, $3, $5, $7);
 	};
 
 bloco_while: TK_PR_WHILE '(' expressao ')' bloco_instrucoes { 

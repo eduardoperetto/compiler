@@ -266,12 +266,12 @@ void gen_comp_greater_equal(Nodo *root, Nodo *arg1, Nodo *arg2) {
     mock_code(root);
 }
 
-void gen_sum(Nodo *root, Nodo *arg1, Nodo *arg2) {
+void gen_bin_expr_from_op(ilocOp op, Nodo *root, Nodo *arg1, Nodo *arg2) {
     ilocArg *result_reg = gen_temp_as_arg();
     ilocCode *code = arg1->iloc_code;
     code = merge_code(code, arg2->iloc_code);
-    ilocCode *sum = gen_code(ADD, build_arg_temp(arg1->temp_reg), build_arg_temp(arg2->temp_reg), result_reg);
-    code = merge_code(code, sum);
+    ilocCode *operation = gen_code(op, build_arg_temp(arg1->temp_reg), build_arg_temp(arg2->temp_reg), result_reg);
+    code = merge_code(code, operation);
     root->iloc_code = code;
     root->temp_reg = result_reg->temp_reg;
 }
@@ -288,31 +288,39 @@ void gen_div(Nodo *root, Nodo *arg1, Nodo *arg2) {
     mock_code(root);
 }
 
+ilocOp string_to_op(char* operator) {
+    if (is_equal(operator, "==")) {
+        return CMP_EQ;
+    } else if (is_equal(operator, "!=")) {
+        return CMP_NE;
+    } else if (is_equal(operator, "<")) {
+        return CMP_LT;
+    } else if (is_equal(operator, "<=")) {
+        return CMP_LE;
+    } else if (is_equal(operator, ">")) {
+        return CMP_GT;
+    } else if (is_equal(operator, ">=")) {
+        return CMP_GE;
+    } else if (is_equal(operator, "+")) {
+        return ADD;
+    } else if (is_equal(operator, "-")) {
+        return SUB;
+    } else if (is_equal(operator, "*")) {
+        return MULT;
+    } else if (is_equal(operator, "/")) {
+        return DIV;
+    } else if (is_equal(operator, "&")) {
+        return AND;
+    } else if (is_equal(operator, "|")) {
+        return OR;
+    } else {
+        return NOP;
+    }
+}
+
 void gen_bin_expr(Nodo *root, Nodo *arg1, Nodo *arg2) {
     char *operator = (root->valor_lexico).label;
-    if (is_equal(operator, "==")) {
-        gen_comp_equal(root, arg1, arg2);
-    } else if (is_equal(operator, "!=")) {
-        gen_comp_unequal(root, arg1, arg2);
-    } else if (is_equal(operator, "<")) {
-        gen_comp_less(root, arg1, arg2);
-    } else if (is_equal(operator, "<=")) {
-        gen_comp_less_equal(root, arg1, arg2);
-    } else if (is_equal(operator, ">")) {
-        gen_comp_greater(root, arg1, arg2);
-    } else if (is_equal(operator, ">=")) {
-        gen_comp_greater_equal(root, arg1, arg2);
-    } else if (is_equal(operator, "+")) {
-        gen_sum(root, arg1, arg2);
-    } else if (is_equal(operator, "-")) {
-        gen_diff(root, arg1, arg2);
-    } else if (is_equal(operator, "*")) {
-        gen_mult(root, arg1, arg2);
-    } else if (is_equal(operator, "/")) {
-        gen_div(root, arg1, arg2);
-    } else {
-        mock_code(root);
-    }
+    gen_bin_expr_from_op(string_to_op(operator), root, arg1, arg2);
 }
 
 void gen_unit_expr(Nodo *root, Nodo *arg1) {
@@ -323,12 +331,23 @@ void gen_while(Nodo *root_while) {
   mock_code(root_while);
 }
 
-void gen_if(Nodo *root_if) {
-  mock_code(root_if);
+void gen_if(Nodo *root_if, Nodo* expr, Nodo *true_block, Nodo *else_block) {
+    char *label_true = gen_label();
+    ilocCode *label_nop_true = gen_code(NOP, build_arg_label(label_true), NULL, NULL);
+    char *label_false = gen_label();
+    ilocCode *label_nop_false = gen_code(NOP, build_arg_label(label_false), NULL, NULL);
+
+    ilocCode *result_code = expr->iloc_code;
+    result_code = merge_code(result_code, label_nop_true);
+    result_code = merge_code(result_code, true_block->iloc_code);
+    result_code = merge_code(result_code, label_nop_false);
+    if (else_block != NULL) {
+        result_code = merge_code(result_code, else_block->iloc_code);
+    }
+    root_if->iloc_code = result_code;
 }
 
 void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTableStack *stack) {
-  int return_addr = -1;
   char *reg_return_addr = gen_temp();
   ilocCode *calc_return_addr = gen_code(ADDI, rpc_arg(), build_arg_im_value(4), build_arg_label(reg_return_addr));
   ilocCode *store_addr = gen_code(STOREAI, build_arg_label(reg_return_addr), rsp_arg(), build_arg_im_value(0));
@@ -357,7 +376,7 @@ void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTable
   
   ilocCode *jump = gen_code(JUMPI, build_arg_label(func_label), NULL, NULL);
   char *reg_result = gen_temp();
-  ilocCode *load_result = gen_code(LOADI, rsp_arg(), build_arg_im_value(12), build_arg_temp(reg_result));
+  ilocCode *load_result = gen_code(LOADAI, rsp_arg(), build_arg_im_value(12), build_arg_temp(reg_result));
 
   result_code = merge_code(result_code, jump);
   result_code = merge_code(result_code, load_result);
