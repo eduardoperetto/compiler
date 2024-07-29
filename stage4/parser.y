@@ -218,13 +218,13 @@ atribuicao: variavel '=' expressao {
 };
 
 invocacao_funcao: TK_IDENTIFICADOR '(' lista_argumentos_funcao ')' {
-		checkNature(tableStack, $1.label, true, get_line_number());
+		checkNatureAndGetLabel(tableStack, $1.label, true, get_line_number());
 		$$ = cria_nodo(cria_call($1)); 
 		adiciona_filho($$, $3); 
 		prt_dbg("invocacao_funcao"); 
 	} 
 	| TK_IDENTIFICADOR '(' ')' {
-		checkNature(tableStack, $1.label, true, get_line_number());
+		checkNatureAndGetLabel(tableStack, $1.label, true, get_line_number());
 		$$ = cria_nodo(cria_call($1)); 
 		prt_dbg("invocacao_funcao (no args)"); 
 	};

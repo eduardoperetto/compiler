@@ -47,7 +47,7 @@ void dropTop(HashTableStack* stack);
 void freeStack(HashTableStack* stack);
 void createTableOnTop(HashTableStack* stack);
 Nodo* getNodeFromId(HashTableStack* stack, char* id, bool isFunction, int line);
-void checkNature(HashTableStack* stack, char* name, bool isFunction, int line);
+void checkNatureAndGetLabel(HashTableStack* stack, char* name, bool isFunction, int line);
 
 /* Debug*/
 void printErrorPrefix(int line);

@@ -80,6 +80,7 @@ typedef struct ILOCCode
     struct ILOCCode *next;
 } ilocCode;
 
+void mock_code(Nodo *node);
 char* gen_label();
 char* gen_temp();
 ilocCode* gen_code(ilocOp operation, ilocArg *arg1, ilocArg *arg2, ilocArg *arg3);
@@ -97,12 +98,18 @@ void gen_func_declaration(Nodo *header, Nodo *body, HashTableStack *table_stack)
 void gen_load_var(Nodo *var);
 void gen_load_literal(Nodo *val_node);
 void gen_assignment(Nodo *assign_node, Nodo* arg3, Nodo* expr);
-void gen_return();
+void gen_return(Nodo *return_node, Nodo *expr_node);
+void gen_bin_expr(Nodo *root, Nodo *arg1, Nodo *arg2);
+void gen_unit_expr(Nodo *root, Nodo *arg1);
+void gen_while(Nodo *root_while);
+void gen_if(Nodo *root_if);
+void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTableStack *stack);
+void capture_params(Nodo* header, Nodo* params);
 void encapsulate_program_code(Nodo* program_node);
 const char* get_operation_string(ilocOp operation);
 void print_arg(ilocArg *arg);
 void print_code(ilocCode *code);
+int get_header_ar_size(Nodo *header);
 ilocCode* gen_header_activation_register(Nodo* header);
-
 
 #endif

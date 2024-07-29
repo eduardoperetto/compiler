@@ -9,6 +9,12 @@ HashTableStack* tableStack;
 HashTable* globalTable;
 
 static int last_table_offset = 0;
+static bool main_declared = false;
+static bool finished_main = false;
+
+bool is_inside_main() {
+  return main_declared && !finished_main;
+}
 
 /* Hash table */
 
@@ -65,6 +71,9 @@ void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFu
     printf("Identificador '%s' já foi declarado.\n", name);
     printPrevDeclaration((table->table[index])->declarationLine);
     exit(ERR_DECLARED);
+  }
+  if (strcmp(name, "main") == 0) {
+    main_declared = true;
   }
 }
 
@@ -224,10 +233,25 @@ void update_func_label(HashTableStack* stack, char* name, char *label) {
   Identifier* identifier = findIdentifier(stack, name, true, -1);
   if (identifier == NULL) {
     printErrorPrefix(-1);
-    printf("Erro interno (função não encontrada ao adicionar label).\n", name);
+    printf("Erro interno (função %s não encontrada ao adicionar label).\n", name);
     exit(ERR_UNDECLARED);
   }
   identifier->func_label = label;
+
+  if (strcmp(name, "main") == 0) {
+    finished_main = true;
+  }
+}
+
+char* get_func_label(HashTableStack* stack, char* name) {
+  unsigned int index = hash(name);
+  Identifier* identifier = findIdentifier(stack, name, true, get_line_number());
+  if (identifier == NULL) {
+    printErrorPrefix(get_line_number());
+    printf("Erro interno (função %s não encontrada ao recuperar label).\n", name);
+    exit(ERR_UNDECLARED);
+  }
+  return identifier->func_label;
 }
 
 Identifier* findIdentifier(HashTableStack* stack, char* name, bool isFunction, int line) {
@@ -285,7 +309,7 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line
   return newNode;
 }
 
-void checkNature(HashTableStack* stack, char* name, bool isFunction, int line) {
+char* checkNatureAndGetLabel(HashTableStack* stack, char* name, bool isFunction, int line) {
   StackNode* currentStackNode = stack->top;
   Identifier* identifier = NULL;
 
@@ -301,6 +325,7 @@ void checkNature(HashTableStack* stack, char* name, bool isFunction, int line) {
     printf("Identificador '%s' não foi declarado.\n", name);
     exit(ERR_UNDECLARED);
   }
+  return identifier->func_label;
 }
 
 void update_last_offset(int offset) {
@@ -309,7 +334,6 @@ void update_last_offset(int offset) {
 
 int get_last_table_offset() {
   int offset = last_table_offset;
-  last_table_offset = 0;
   return offset;
 }
 
