@@ -4,9 +4,10 @@
 #include "iloc.h"
 
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 
-#define DEBUG_PARSER 1
+#define DEBUG_PARSER 0
 #define DEBUG_NODES 0
 #define PRINT_TREE_ADDR 0
 
@@ -41,6 +42,16 @@ typedef struct Nodo {
   char* temp_reg_false;
   TipoToken tipo;
 } Nodo;
+
+typedef struct StoredIdentifier {
+  char *label;
+  valorLexico valor_lexico;
+  int table_local_addr;
+  bool is_global;
+  char *func_label;
+  Value valor;
+  TipoToken tipo;
+} StoredIdentifier;
 
 valorLexico atribui_yylval(char *yytext, TipoToken tipo, int num_lines);
 

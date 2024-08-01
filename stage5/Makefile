@@ -54,3 +54,8 @@ dot:
 	rm -f saida.dot
 	@$(MAKE) -s run
 	./etapa5 < input.txt | ./output2dot.sh > saida.dot
+
+ilocsim:
+	@$(MAKE) -s all
+	@$(SH) ./etapa5 < input.txt > output.iloc
+	python3 ilocsim.py -i -m -s -t < output.iloc

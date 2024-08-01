@@ -73,14 +73,6 @@ Nodo *cria_nodo(valorLexico valor) {
 void assign_code(Nodo* node, ilocCode *code) {
   if (node == NULL || code == NULL) return;
   node->iloc_code = code;
-  #if DEBUG_ILOC
-  print_code(code);
-  #endif
-}
-
-void copy_code_and_free(Nodo* destiny, Nodo* source) {
-  destiny->iloc_code = source->iloc_code;
-  free(source->iloc_code);
 }
 
 void adiciona_filho(Nodo *pai, Nodo *filho) {
@@ -241,6 +233,8 @@ void prt_node(void *ptr) {
     }
 	  printf("  }\n");
     printf("  tipo: %s\n", tipoTokenToString(nodo->tipo));
+    printf("  temp_reg: %s\n", nodo->temp_reg);
+    print_node_code(nodo);
     printf("}\n");
     #endif
 }

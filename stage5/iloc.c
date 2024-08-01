@@ -94,10 +94,7 @@ ilocCode *merge_code(ilocCode *current, ilocCode *new) {
 }
 
 void append_node_codes(Nodo *destiny, Nodo *appending) {
-  printf("Appending: ");
-  print_node_code(appending);
   destiny->iloc_code = merge_code(destiny->iloc_code, appending->iloc_code);
-  print_node_code(destiny);
 }
 
 ilocCode *gen_label_with_nop() {
@@ -204,11 +201,12 @@ ilocCode *gen_header_activation_register(Nodo *header) {
   return gen_code(ADDI, rsp_arg(), build_arg_im_value(size), rsp_arg());
 }
 
-void gen_load_var(Nodo *var) {
+void gen_load_var(Nodo *var, bool is_global) {
   ilocArg *result = gen_temp_as_arg();
-  int rfp_offset = is_inside_main() ? 0 : curr_func_rbss;
-  ilocCode *load = gen_code(LOADAI, rfp_arg(), build_arg_im_value(rfp_offset + var->table_local_addr), result);
-  var->iloc_code = merge_code(var->iloc_code, load);
+  int rfp_offset = (is_inside_main() || is_global) ? 0 : curr_func_rbss;
+  ilocArg *storageReg = is_global ? rbss_arg() : rfp_arg();
+  ilocCode *load = gen_code(LOADAI, storageReg, build_arg_im_value(rfp_offset + var->table_local_addr), result);
+  var->iloc_code = load;
   var->temp_reg = result->temp_reg;
 }
 
@@ -216,7 +214,7 @@ void gen_load_literal(Nodo *val_node) {
   ilocArg *result = gen_temp_as_arg();
   ilocCode *load;
   // Fazer um switch no futuro
-  load = gen_code(LOADI, build_arg_im_value((val_node->valor_lexico).valor.i_val), NULL, result);
+  load = gen_code(LOADI, build_arg_im_value((val_node->valor_lexico).valor.i_val), result, NULL);
   val_node->iloc_code = load;
   val_node->temp_reg = result->temp_reg;
 }
@@ -242,30 +240,6 @@ bool is_equal(char* str1, char* str2) {
     return strcmp(str1, str2) == 0;
 }
 
-void gen_comp_equal(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    mock_code(root);
-}
-
-void gen_comp_unequal(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    mock_code(root);
-}
-
-void gen_comp_less(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    mock_code(root);
-}
-
-void gen_comp_less_equal(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    mock_code(root);
-}
-
-void gen_comp_greater(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    mock_code(root);
-}
-
-void gen_comp_greater_equal(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    mock_code(root);
-}
-
 void gen_bin_expr_from_op(ilocOp op, Nodo *root, Nodo *arg1, Nodo *arg2) {
     ilocArg *result_reg = gen_temp_as_arg();
     ilocCode *code = arg1->iloc_code;
@@ -274,18 +248,6 @@ void gen_bin_expr_from_op(ilocOp op, Nodo *root, Nodo *arg1, Nodo *arg2) {
     code = merge_code(code, operation);
     root->iloc_code = code;
     root->temp_reg = result_reg->temp_reg;
-}
-
-void gen_diff(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    mock_code(root);
-}
-
-void gen_mult(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    mock_code(root);
-}
-
-void gen_div(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    mock_code(root);
 }
 
 ilocOp string_to_op(char* operator) {
@@ -323,8 +285,22 @@ void gen_bin_expr(Nodo *root, Nodo *arg1, Nodo *arg2) {
     gen_bin_expr_from_op(string_to_op(operator), root, arg1, arg2);
 }
 
-void gen_unit_expr(Nodo *root, Nodo *arg1) {
-  mock_code(root);
+void gen_invert_signal(Nodo *root, Nodo *arg) {
+  ilocArg *result_reg = gen_temp_as_arg();
+  ilocCode *code = arg->iloc_code;
+  ilocCode *operation = gen_code(MULTI, build_arg_temp(arg->temp_reg), build_arg_im_value(-1), result_reg);
+  code = merge_code(code, operation);
+  root->iloc_code = code;
+  root->temp_reg = result_reg->temp_reg;
+}
+
+void gen_logic_invert(Nodo *root, Nodo *arg) {
+  ilocArg *result_reg = gen_temp_as_arg();
+  ilocCode *code = arg->iloc_code;
+  ilocCode *operation = gen_code(CMP_EQ, build_arg_temp(arg->temp_reg), build_arg_im_value(0), result_reg);
+  code = merge_code(code, operation);
+  root->iloc_code = code;
+  root->temp_reg = result_reg->temp_reg;
 }
 
 void gen_while(Nodo *root_while) {
@@ -337,12 +313,24 @@ void gen_if(Nodo *root_if, Nodo* expr, Nodo *true_block, Nodo *else_block) {
     char *label_false = gen_label();
     ilocCode *label_nop_false = gen_code(NOP, build_arg_label(label_false), NULL, NULL);
 
+    char *label_jump_false = gen_label();
+    ilocCode *label_nop_jump_false = gen_code(NOP, build_arg_label(label_jump_false), NULL, NULL);
+
     ilocCode *result_code = expr->iloc_code;
+
+    ilocCode *branch = gen_code(CBR, build_arg_temp(expr->temp_reg), build_arg_label(label_true), build_arg_label(label_false));
+
+    result_code = merge_code(result_code, branch);
+
     result_code = merge_code(result_code, label_nop_true);
     result_code = merge_code(result_code, true_block->iloc_code);
+    if (else_block != NULL) {
+      result_code = merge_code(result_code, gen_code(JUMPI, build_arg_label(label_jump_false), NULL, NULL));
+    }
     result_code = merge_code(result_code, label_nop_false);
     if (else_block != NULL) {
         result_code = merge_code(result_code, else_block->iloc_code);
+        result_code = merge_code(result_code, label_nop_jump_false);
     }
     root_if->iloc_code = result_code;
 }
@@ -416,101 +404,101 @@ void encapsulate_program_code(Nodo *program_node) {
 const char *get_operation_string(ilocOp operation) {
   switch (operation) {
     case NOP:
-      return "NOP";
+      return "nop";
     case ADD:
-      return "ADD";
+      return "add";
     case SUB:
-      return "SUB";
+      return "sub";
     case MULT:
-      return "MULT";
+      return "mult";
     case DIV:
-      return "DIV";
+      return "div";
     case ADDI:
-      return "ADDI";
+      return "addI";
     case SUBI:
-      return "SUBI";
+      return "subI";
     case RSUBI:
-      return "RSUBI";
+      return "rsubI";
     case MULTI:
-      return "MULTI";
+      return "multI";
     case DIVI:
-      return "DIVI";
+      return "divI";
     case RDIVI:
-      return "RDIVI";
+      return "rdivI";
     case LSHIFT:
-      return "LSHIFT";
+      return "lshift";
     case LSHIFTI:
-      return "LSHIFTI";
+      return "lshiftI";
     case RSHIFT:
-      return "RSHIFT";
+      return "rshift";
     case RSHIFTI:
-      return "RSHIFTI";
+      return "rshiftI";
     case AND:
-      return "AND";
+      return "and";
     case ANDI:
-      return "ANDI";
+      return "andI";
     case OR:
-      return "OR";
+      return "or";
     case ORI:
-      return "ORI";
+      return "orI";
     case XOR:
-      return "XOR";
+      return "xor";
     case XORI:
-      return "XORI";
+      return "xorI";
     case LOADI:
-      return "LOADI";
+      return "loadI";
     case LOAD:
-      return "LOAD";
+      return "load";
     case LOADAI:
-      return "LOADAI";
+      return "loadAI";
     case LOADA0:
-      return "LOADA0";
+      return "loadA0";
     case CLOAD:
-      return "CLOAD";
+      return "cload";
     case CLOADAI:
-      return "CLOADAI";
+      return "cloadAI";
     case CLOADA0:
-      return "CLOADA0";
+      return "cloadA0";
     case STORE:
-      return "STORE";
+      return "store";
     case STOREAI:
-      return "STOREAI";
+      return "storeAI";
     case STOREAO:
-      return "STOREAO";
+      return "storeAO";
     case CSTORE:
-      return "CSTORE";
+      return "cstore";
     case CSTOREAI:
-      return "CSTOREAI";
+      return "cstoreAI";
     case CSTOREAO:
-      return "CSTOREAO";
+      return "cstoreAO";
     case I2I:
-      return "I2I";
+      return "i2i";
     case C2C:
-      return "C2C";
+      return "c2c";
     case C2I:
-      return "C2I";
+      return "c2i";
     case I2C:
-      return "I2C";
+      return "i2c";
     case JUMPI:
-      return "JUMPI";
+      return "jumpI";
     case JUMP:
-      return "JUMP";
+      return "jump";
     case CBR:
-      return "CBR";
+      return "cbr";
     case CMP_LT:
-      return "CMP_LT";
+      return "cmp_LT";
     case CMP_LE:
-      return "CMP_LE";
+      return "cmp_LE";
     case CMP_EQ:
-      return "CMP_EQ";
+      return "cmp_EQ";
     case CMP_GE:
-      return "CMP_GE";
+      return "cmp_GE";
     case CMP_GT:
-      return "CMP_GT";
+      return "cmp_GT";
     case CMP_NE:
-      return "CMP_NE";
+      return "cmp_NE";
     default:
-      return "UNKNOWN";
+      return "unknown_op";
   }
 }
 
@@ -526,7 +514,6 @@ void print_arg(ilocArg *arg) {
 }
 
 void print_code(ilocCode *code) {
-  printf("------------------------------\n");
   ilocCode *current = code;
 
   if (current == NULL) {
@@ -537,25 +524,49 @@ void print_code(ilocCode *code) {
   while (current != NULL) {
     switch (current->operation) {
       case NOP:
-        printf("%s: NOP\n", (current->arg1)->label);
+        printf("%s: nop\n", (current->arg1)->label);
+        break;
+
+      case LOADI:
+        printf("loadI ");
+        print_arg(current->arg1);
+        printf(" => ");
+        print_arg(current->arg2);
+        printf("\n");
+        break;
+
+      case JUMPI:
+        printf("jumpI ->");
+        print_arg(current->arg1);
+        printf("\n");
         break;
 
       case STOREAI:
         if ((current->arg1)->temp_reg) {
-          printf("STOREAI %s => %s, %d\n",
+          printf("storeAI %s => %s, %d\n",
                  (current->arg1)->temp_reg,
                  (current->arg2)->label,
                  (current->arg3)->imediate_value);
         } else {
-          printf("STOREAI %s => %s, %d\n",
+          printf("storeAI %s => %s, %d\n",
                  (current->arg1)->label,
                  (current->arg2)->label,
                  (current->arg3)->imediate_value);
         }
         break;
 
+      case CBR:
+        printf("cbr ");
+        print_arg(current->arg1);
+        printf(" -> ");
+        print_arg(current->arg2);
+        printf(", ");
+        print_arg(current->arg3);
+        printf("\n");
+        break;
+
       case HALT:
-        printf("HALT\n");
+        printf("halt\n");
         return;
 
       default:

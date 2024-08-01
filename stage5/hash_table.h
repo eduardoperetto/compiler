@@ -12,6 +12,7 @@ typedef struct Identifier {
   char name[50];
   bool initialized;
   bool isFunction;
+  bool isGlobal;
   int declarationLine;
   TipoToken type;
   Value value;
@@ -22,7 +23,7 @@ typedef struct Identifier {
 
 typedef struct HashTable {
   Identifier* table[TABLE_SIZE];
-  char *scope_name;
+  bool is_global;
   int curr_offset;
 } HashTable;
 
@@ -38,8 +39,8 @@ typedef struct HashTableStack {
 int get_size(TipoToken tipo);
 bool is_inside_main();
 
-HashTable* createTable();
-void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction, int line);
+HashTable* createTable(bool is_global);
+void addIdentifier(HashTableStack** stack, const char* name, TipoToken type, bool isFunction, bool is_global, int line);
 Identifier* getIdentifier(HashTable* table, const char* name, bool isFunction, int line);
 void freeTable(HashTable* table);
 void printTable(HashTable* table);
@@ -57,6 +58,7 @@ Identifier* findIdentifier(HashTableStack* stack, char* name, bool isFunction, i
 void update_func_label(HashTableStack* stack, char* name, char *label);
 char* get_func_label(HashTableStack* stack, char* name);
 Nodo* getNodeFromId(HashTableStack* stack, char* id, bool isFunction, int line);
+Nodo* makeNodeFromIdentifier(Identifier *identifier);
 char* checkNatureAndGetLabel(HashTableStack* stack, char* name, bool isFunction, int line);
 void update_last_offset(int offset);
 int get_last_table_offset();

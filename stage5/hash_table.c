@@ -36,7 +36,7 @@ unsigned int hash(const char* key) {
   return hash % TABLE_SIZE;
 }
 
-HashTable* createTable() {
+HashTable* createTable(bool isGlobal) {
   HashTable* newTable = (HashTable*)malloc(sizeof(HashTable));
   for (int i = 0; i < TABLE_SIZE; i++) {
     newTable->table[i] = NULL;
@@ -44,7 +44,7 @@ HashTable* createTable() {
   return newTable;
 }
 
-Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction, int line, int local_addr) {
+Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction, bool isGlobal, int line, int local_addr) {
   Identifier* newIdentifier = (Identifier*)malloc(sizeof(Identifier));
   strcpy(newIdentifier->name, name);
   newIdentifier->type = type;
@@ -52,18 +52,22 @@ Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction, 
   newIdentifier->initialized = isFunction;
   newIdentifier->declarationLine = line;
   newIdentifier->local_addr = local_addr;
+  newIdentifier->isGlobal = isGlobal;
   newIdentifier->next = NULL;
   return newIdentifier;
 }
 
-void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction, int line) {
-  if (table == NULL) {
-    table = createTable();
+void addIdentifier(HashTableStack** stack, const char* name, TipoToken type, bool isFunction, bool isGlobal, int line) {
+  HashTable *table;
+  if (isGlobal) {
+    table = getLast(stack);
+  } else {
+    table = getTop(stack);
   }
   unsigned int index = hash(name);
   int local_addr = table->curr_offset;
   table->curr_offset += get_size(type);
-  Identifier* newIdentifier = createIdentifier(name, type, isFunction, line, local_addr);
+  Identifier* newIdentifier = createIdentifier(name, type, isFunction, isGlobal, line, local_addr);
   if (table->table[index] == NULL) {
     table->table[index] = newIdentifier;
   } else {
@@ -170,9 +174,9 @@ void createTableOnTop(HashTableStack** stack) {
   if (*stack == NULL) {
     *stack = (HashTableStack*)malloc(sizeof(HashTableStack));
     initializeStack(*stack);
-    (*stack)->top = createStackNode(createTable());
+    (*stack)->top = createStackNode(createTable(false));
   }
-  HashTable* newTable = createTable();
+  HashTable* newTable = createTable(false);
   addOnTop(*stack, newTable);
 }
 
@@ -180,7 +184,7 @@ HashTable* getTop(HashTableStack** stack) {
   if (*stack == NULL) {
     *stack = (HashTableStack*)malloc(sizeof(HashTableStack));
     initializeStack(*stack);
-    (*stack)->top = createStackNode(createTable());
+    (*stack)->top = createStackNode(createTable(false));
   }
   if ((*stack)->top == NULL) {
     return NULL;
@@ -192,7 +196,8 @@ HashTable* getLast(HashTableStack** stack) {
   if (*stack == NULL) {
     *stack = (HashTableStack*)malloc(sizeof(HashTableStack));
     initializeStack(*stack);
-    (*stack)->top = createStackNode(createTable());
+    // When trying to get last table of stack, it is intended to get global scope
+    (*stack)->top = createStackNode(createTable(true));
   }
   StackNode* current = (*stack)->top;
   while (current->next != NULL) {
@@ -283,8 +288,12 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line
     exit(ERR_UNDECLARED);
   }
 
+  return makeNodeFromIdentifier(identifier);
+}
+
+Nodo* makeNodeFromIdentifier(Identifier *identifier) {
   Nodo* newNode = (Nodo*)malloc(sizeof(Nodo));
-  newNode->valor_lexico.linha = -1;
+  newNode->valor_lexico.linha = identifier->declarationLine;
   newNode->valor_lexico.tipo = identifier->type;
   newNode->valor_lexico.label = strdup(identifier->name);
   newNode->num_filhos = 0;

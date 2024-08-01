@@ -34,6 +34,7 @@ void prt_dbg(char* rule) {
    valorLexico valor_lexico;
    struct Nodo *nodo;
    TipoToken tipo;
+   struct Identifier *identifier;
 }
 
 %token TK_PR_INT        
@@ -66,7 +67,6 @@ void prt_dbg(char* rule) {
 %type <valor_lexico> operador_bin_prec2
 
 %type <nodo> literal
-%type <nodo> variavel
 %type <nodo> expressao_terminal
 %type <nodo> expressao9
 %type <nodo> expressao8
@@ -102,6 +102,8 @@ void prt_dbg(char* rule) {
 %type <nodo> definicoes_globais
 %type <nodo> programa
 
+%type <identifier> variavel
+
 %type <tipo> tipo
 
 %%
@@ -136,12 +138,11 @@ definicao_global: declaracao_variavel_externa { $$ = NULL; prt_dbg("definicao_gl
 | definicao_de_funcao { $$ = $1; prt_dbg("definicao_global"); };
 
 declaracao_variavel_externa: tipo especificacao_variaveis ',' { 
-	HashTable* topTable = getTop(&tableStack);
-	addIdentifier(topTable, ($2->valor_lexico).label, $1, false, get_line_number());
+	addIdentifier(&tableStack, ($2->valor_lexico).label, $1, false, true, get_line_number());
 
 	for (int i = 0; i < $2->num_filhos; i++) {
         if ($2->filhos[i]) {
-			addIdentifier(topTable, (($2->filhos[i])->valor_lexico).label, $1, false, get_line_number());
+			addIdentifier(&tableStack, (($2->filhos[i])->valor_lexico).label, $1, false, true, get_line_number());
         }
     }
 };
@@ -158,8 +159,7 @@ definicao_de_funcao: cabecalho_funcao corpo_funcao {
 
 cabecalho_funcao: abre_parametros_funcao argumentos_funcao ')' TK_OC_OR tipo '/' TK_IDENTIFICADOR {
 	$$ = cria_nodo_v2($7, $5);
-	HashTable* globalTable = getLast(&tableStack);
-	addIdentifier(globalTable, $7.label, $5, true, get_line_number());
+	addIdentifier(&tableStack, $7.label, $5, true, true, get_line_number());
 	capture_params($$, $2);
 	prt_dbg("cabecalho_funcao"); 
 };
@@ -179,9 +179,9 @@ lista_parametros: parametro { $$ = $1; prt_dbg("lista_parametros"); }
 	| parametro ';' lista_parametros { $$ = $1; adiciona_filho($1,$3); prt_dbg("lista_parametros"); };
 
 parametro: tipo TK_IDENTIFICADOR { 
-	$$ = cria_nodo_v2($2, $1); 
+	$$ = cria_nodo_v2($2, $1);
+	addIdentifier(&tableStack, $2.label, $1, false, false, get_line_number());
 	HashTable* topTable = getTop(&tableStack);
-	addIdentifier(topTable, $2.label, $1, false, get_line_number());
 	update_last_offset(topTable->curr_offset);
 	prt_dbg("parametro"); 
 };
@@ -253,11 +253,14 @@ instrucao_simples: declaracao_variavel_interna ',' { $$ = NULL; prt_dbg("instruc
 	| ',' { $$ = NULL; prt_dbg("instrucao_simples (apenas vírgula)"); };
 
 atribuicao: variavel '=' expressao { 
-	$$ = cria_nodo($2); 
-	adiciona_filho($$, $1);
+	$$ = cria_nodo($2);
+	
+	Nodo* var = makeNodeFromIdentifier($1);
+	adiciona_filho($$, var);
+
 	adiciona_filho($$, $3);
-	updateIdentifier(tableStack, ($1->valor_lexico).label, ($3->valor_lexico).valor, get_line_number());
-	gen_assignment($$, $1, $3);
+	updateIdentifier(tableStack, $1->name, ($3->valor_lexico).valor, get_line_number());
+	gen_assignment($$, var, $3);
 	prt_dbg("atribuicao"); 
 };
 
@@ -276,12 +279,11 @@ invocacao_funcao: TK_IDENTIFICADOR '(' lista_argumentos_funcao ')' {
 	};
 
 declaracao_variavel_interna: tipo especificacao_variaveis_internas {
-	HashTable* topTable = getTop(&tableStack);
-	addIdentifier(topTable, ($2->valor_lexico).label, $1, false, get_line_number());
+	addIdentifier(&tableStack, ($2->valor_lexico).label, $1, false, false, get_line_number());
 
 	for (int i = 0; i < $2->num_filhos; i++) {
         if ($2->filhos[i]) {
-			addIdentifier(topTable, (($2->filhos[i])->valor_lexico).label, $1, false, get_line_number());
+			addIdentifier(&tableStack, (($2->filhos[i])->valor_lexico).label, $1, false, false, get_line_number());
         }
     }
 
@@ -390,13 +392,13 @@ expressao6: expressao6 operador_bin_prec2 expressao7 {
 expressao7: '-' expressao8 { 
 	$$ = cria_nodo_v2($1, $2->tipo); 
 	adiciona_filho($$, $2); 
-	gen_unit_expr($$, $2);
+	gen_invert_signal($$, $2);
 	prt_dbg("expressao7");
 }
 	| '!' expressao8 { 
 		$$ = cria_nodo_v2($1, $2->tipo); 
 		adiciona_filho($$, $2); 
-		gen_unit_expr($$, $2);
+		gen_logic_invert($$, $2);
 		prt_dbg("expressao7"); 
 	}
 	| expressao8 { $$ = $1; prt_dbg("expressao7"); };
@@ -407,14 +409,15 @@ expressao8: expressao_terminal { $$ = $1; prt_dbg("expressao8"); }
 expressao9: '(' expressao ')'  { $$ = $2; prt_dbg("expressao9"); };
 
 variavel: TK_IDENTIFICADOR {
-	$$ = getNodeFromId(tableStack, $1.label, false, get_line_number()); 
+	$$ = findIdentifier(tableStack, $1.label, false, get_line_number()); 
 	prt_dbg("variavel"); 
 }
 
 expressao_terminal: variavel {
-	$$ = $1;
-	gen_load_var($$);
-	prt_dbg("expressao_terminal (variavel)"); 
+	Nodo* var = makeNodeFromIdentifier($1);
+	gen_load_var(var, $1->isGlobal);
+	$$ = var;
+	prt_dbg("expressao_terminal (variavel)");
 }
 	| invocacao_funcao { 
 		$$ = $1;

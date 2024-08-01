@@ -1,6 +1,7 @@
 #ifndef ILOC_H
 #define ILOC_H
 #include <stdlib.h>
+#include <stdbool.h>
 
 /* Forward declarations */
 typedef struct Nodo Nodo;
@@ -95,12 +96,13 @@ ilocArg* gen_temp_as_arg();
 ilocArg* rfp_arg();
 ilocArg* rbss_arg();
 void gen_func_declaration(Nodo *header, Nodo *body, HashTableStack *table_stack);
-void gen_load_var(Nodo *var);
+void gen_load_var(Nodo *var, bool is_global);
 void gen_load_literal(Nodo *val_node);
 void gen_assignment(Nodo *assign_node, Nodo* arg3, Nodo* expr);
 void gen_return(Nodo *return_node, Nodo *expr_node);
 void gen_bin_expr(Nodo *root, Nodo *arg1, Nodo *arg2);
-void gen_unit_expr(Nodo *root, Nodo *arg1);
+void gen_invert_signal(Nodo *root, Nodo *arg);
+void gen_logic_invert(Nodo *root, Nodo *arg);
 void gen_while(Nodo *root_while);
 void gen_if(Nodo *root_if, Nodo* expr, Nodo *true_block, Nodo *else_block);
 void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTableStack *stack);
