@@ -103,7 +103,7 @@ void gen_return(Nodo *return_node, Nodo *expr_node);
 void gen_bin_expr(Nodo *root, Nodo *arg1, Nodo *arg2);
 void gen_invert_signal(Nodo *root, Nodo *arg);
 void gen_logic_invert(Nodo *root, Nodo *arg);
-void gen_while(Nodo *root_while);
+void gen_while(Nodo *root_while, Nodo* expr, Nodo* block);
 void gen_if(Nodo *root_if, Nodo* expr, Nodo *true_block, Nodo *else_block);
 void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTableStack *stack);
 void capture_params(Nodo* header, Nodo* params);

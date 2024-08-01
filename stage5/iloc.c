@@ -165,34 +165,33 @@ void gen_func_declaration(Nodo *header, Nodo *body, HashTableStack *table_stack)
   }
 }
 
-void capture_params(Nodo* header, Nodo* params) {
-    if (params == NULL) return;
-    int rbss = get_header_ar_size(header);
-    curr_func_rbss = rbss;
-    int curr_offset = 0;
+void capture_params(Nodo *header, Nodo *params) {
+  if (params == NULL) return;
+  int rbss = get_header_ar_size(header);
+  curr_func_rbss = rbss;
+  int curr_offset = 0;
 
-    
-    ilocArg *temp = gen_temp_as_arg();
-    ilocCode* load = gen_code(LOADAI, rfp_arg(), build_arg_im_value(12 + curr_offset), temp);
-    ilocCode* store = gen_code(STOREAI, temp, rfp_arg(), build_arg_im_value(rbss + curr_offset));
+  ilocArg *temp = gen_temp_as_arg();
+  ilocCode *load = gen_code(LOADAI, rfp_arg(), build_arg_im_value(12 + curr_offset), temp);
+  ilocCode *store = gen_code(STOREAI, temp, rfp_arg(), build_arg_im_value(rbss + curr_offset));
 
-    ilocCode *result = load;
+  ilocCode *result = load;
+  result = merge_code(result, store);
+  for (int i = 0; i < params->num_filhos; i++) {
+    temp = gen_temp_as_arg();
+    load = gen_code(LOADAI, rfp_arg(), build_arg_im_value(12 + curr_offset), temp);
+    store = gen_code(STOREAI, temp, rfp_arg(), build_arg_im_value(rbss + curr_offset));
+    result = merge_code(result, load);
     result = merge_code(result, store);
-    for (int i=0; i < params->num_filhos; i++) {
-        temp = gen_temp_as_arg();
-        load = gen_code(LOADAI, rfp_arg(), build_arg_im_value(12 + curr_offset), temp);
-        store = gen_code(STOREAI, temp, rfp_arg(), build_arg_im_value(rbss + curr_offset));
-        result = merge_code(result, load);
-        result = merge_code(result, store);
-    }
-    header->iloc_code = result;
+  }
+  header->iloc_code = result;
 }
 
 int get_header_ar_size(Nodo *header) {
-    int size = 12;                    // addr_return; rsp; rfp
-    size += get_last_table_offset();  // size of parameters and local vars
-    size += get_size(header->tipo);   // size of return value
-    return size;
+  int size = 12;                    // addr_return; rsp; rfp
+  size += get_last_table_offset();  // size of parameters and local vars
+  size += get_size(header->tipo);   // size of return value
+  return size;
 }
 
 // Ordem de elementos no RA: endereço de retorno, old_rsp, old_rfp, parametros, valor_retorno; depois, vem var_locais.
@@ -236,53 +235,53 @@ void gen_return(Nodo *return_node, Nodo *expr_node) {
   return_node->iloc_code = merge_code(expr_node->iloc_code, load_result_on_rsp);
 }
 
-bool is_equal(char* str1, char* str2) {
-    return strcmp(str1, str2) == 0;
+bool is_equal(char *str1, char *str2) {
+  return strcmp(str1, str2) == 0;
 }
 
 void gen_bin_expr_from_op(ilocOp op, Nodo *root, Nodo *arg1, Nodo *arg2) {
-    ilocArg *result_reg = gen_temp_as_arg();
-    ilocCode *code = arg1->iloc_code;
-    code = merge_code(code, arg2->iloc_code);
-    ilocCode *operation = gen_code(op, build_arg_temp(arg1->temp_reg), build_arg_temp(arg2->temp_reg), result_reg);
-    code = merge_code(code, operation);
-    root->iloc_code = code;
-    root->temp_reg = result_reg->temp_reg;
+  ilocArg *result_reg = gen_temp_as_arg();
+  ilocCode *code = arg1->iloc_code;
+  code = merge_code(code, arg2->iloc_code);
+  ilocCode *operation = gen_code(op, build_arg_temp(arg1->temp_reg), build_arg_temp(arg2->temp_reg), result_reg);
+  code = merge_code(code, operation);
+  root->iloc_code = code;
+  root->temp_reg = result_reg->temp_reg;
 }
 
-ilocOp string_to_op(char* operator) {
-    if (is_equal(operator, "==")) {
-        return CMP_EQ;
-    } else if (is_equal(operator, "!=")) {
-        return CMP_NE;
-    } else if (is_equal(operator, "<")) {
-        return CMP_LT;
-    } else if (is_equal(operator, "<=")) {
-        return CMP_LE;
-    } else if (is_equal(operator, ">")) {
-        return CMP_GT;
-    } else if (is_equal(operator, ">=")) {
-        return CMP_GE;
-    } else if (is_equal(operator, "+")) {
-        return ADD;
-    } else if (is_equal(operator, "-")) {
-        return SUB;
-    } else if (is_equal(operator, "*")) {
-        return MULT;
-    } else if (is_equal(operator, "/")) {
-        return DIV;
-    } else if (is_equal(operator, "&")) {
-        return AND;
-    } else if (is_equal(operator, "|")) {
-        return OR;
-    } else {
-        return NOP;
-    }
+ilocOp string_to_op(char *operator) {
+  if (is_equal(operator, "==")) {
+    return CMP_EQ;
+  } else if (is_equal(operator, "!=")) {
+    return CMP_NE;
+  } else if (is_equal(operator, "<")) {
+    return CMP_LT;
+  } else if (is_equal(operator, "<=")) {
+    return CMP_LE;
+  } else if (is_equal(operator, ">")) {
+    return CMP_GT;
+  } else if (is_equal(operator, ">=")) {
+    return CMP_GE;
+  } else if (is_equal(operator, "+")) {
+    return ADD;
+  } else if (is_equal(operator, "-")) {
+    return SUB;
+  } else if (is_equal(operator, "*")) {
+    return MULT;
+  } else if (is_equal(operator, "/")) {
+    return DIV;
+  } else if (is_equal(operator, "&")) {
+    return AND;
+  } else if (is_equal(operator, "|")) {
+    return OR;
+  } else {
+    return NOP;
+  }
 }
 
 void gen_bin_expr(Nodo *root, Nodo *arg1, Nodo *arg2) {
-    char *operator = (root->valor_lexico).label;
-    gen_bin_expr_from_op(string_to_op(operator), root, arg1, arg2);
+  char *operator=(root->valor_lexico).label;
+  gen_bin_expr_from_op(string_to_op(operator), root, arg1, arg2);
 }
 
 void gen_invert_signal(Nodo *root, Nodo *arg) {
@@ -303,36 +302,49 @@ void gen_logic_invert(Nodo *root, Nodo *arg) {
   root->temp_reg = result_reg->temp_reg;
 }
 
-void gen_while(Nodo *root_while) {
+void gen_while(Nodo *root_while, Nodo *expr, Nodo *block) {
   mock_code(root_while);
+  ilocArg *arg_aux = build_arg_label(gen_label());
+  ilocArg *arg_label_true = build_arg_label(gen_label());
+  ilocArg *arg_label_false = build_arg_label(gen_label());
+
+  ilocCode *while_code = gen_code(NOP, arg_aux, NULL, NULL); // Label aux
+  while_code = merge_code(while_code, expr->iloc_code); // Expr.code
+  while_code = merge_code(while_code, gen_code(CBR, build_arg_temp(expr->temp_reg), arg_label_true, arg_label_false)); // Branch based on expr temp
+  while_code = merge_code(while_code, gen_code(NOP, arg_label_true, NULL, NULL)); // Label true
+  while_code = merge_code(while_code, block->iloc_code); // Cmd block
+  while_code = merge_code(while_code, gen_code(JUMPI, arg_aux, NULL, NULL)); // Jump aux
+  while_code = merge_code(while_code, gen_code(NOP, arg_label_false, NULL, NULL)); // Label false (end)
+
+  root_while->iloc_code = while_code;
 }
 
-void gen_if(Nodo *root_if, Nodo* expr, Nodo *true_block, Nodo *else_block) {
-    char *label_true = gen_label();
-    ilocCode *label_nop_true = gen_code(NOP, build_arg_label(label_true), NULL, NULL);
-    char *label_false = gen_label();
-    ilocCode *label_nop_false = gen_code(NOP, build_arg_label(label_false), NULL, NULL);
+void gen_if(Nodo *root_if, Nodo *expr, Nodo *true_block, Nodo *else_block) {
+  char *label_true = gen_label();
+  ilocCode *label_nop_true = gen_code(NOP, build_arg_label(label_true), NULL, NULL);
+  char *label_false = gen_label();
+  ilocCode *label_nop_false = gen_code(NOP, build_arg_label(label_false), NULL, NULL);
 
-    char *label_jump_false = gen_label();
-    ilocCode *label_nop_jump_false = gen_code(NOP, build_arg_label(label_jump_false), NULL, NULL);
+  char *label_jump_false = gen_label();
+  ilocCode *label_nop_jump_false = gen_code(NOP, build_arg_label(label_jump_false), NULL, NULL);
 
-    ilocCode *result_code = expr->iloc_code;
+  ilocCode *result_code = expr->iloc_code;
 
-    ilocCode *branch = gen_code(CBR, build_arg_temp(expr->temp_reg), build_arg_label(label_true), build_arg_label(label_false));
+  ilocCode *branch = gen_code(CBR, build_arg_temp(expr->temp_reg), build_arg_label(label_true), build_arg_label(label_false));
 
-    result_code = merge_code(result_code, branch);
+  result_code = merge_code(result_code, branch);
 
-    result_code = merge_code(result_code, label_nop_true);
-    result_code = merge_code(result_code, true_block->iloc_code);
-    if (else_block != NULL) {
-      result_code = merge_code(result_code, gen_code(JUMPI, build_arg_label(label_jump_false), NULL, NULL));
-    }
-    result_code = merge_code(result_code, label_nop_false);
-    if (else_block != NULL) {
-        result_code = merge_code(result_code, else_block->iloc_code);
-        result_code = merge_code(result_code, label_nop_jump_false);
-    }
-    root_if->iloc_code = result_code;
+  result_code = merge_code(result_code, label_nop_true);
+  result_code = merge_code(result_code, true_block->iloc_code);
+  if (else_block != NULL) {
+    result_code = merge_code(result_code, gen_code(JUMPI, build_arg_label(label_jump_false), NULL, NULL));
+  }
+  result_code = merge_code(result_code, label_nop_false);
+  if (else_block != NULL) {
+    result_code = merge_code(result_code, else_block->iloc_code);
+    result_code = merge_code(result_code, label_nop_jump_false);
+  }
+  root_if->iloc_code = result_code;
 }
 
 void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTableStack *stack) {
@@ -353,15 +365,15 @@ void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTable
     storeArg = merge_code(storeArg, gen_code(STOREAI, build_arg_temp(args_node->temp_reg), rsp_arg(), build_arg_im_value(offset)));
     result_code = merge_code(result_code, storeArg);
 
-    for (int i=0; args_node->num_filhos; i++) {
-        Nodo* current = args_node->filhos[i];
-        offset += get_size(current->tipo);
-        storeArg = current->iloc_code;
-        storeArg = merge_code(storeArg, gen_code(STOREAI, build_arg_temp(args_node->temp_reg), rsp_arg(), build_arg_im_value(offset)));
-        result_code = merge_code(result_code, storeArg);
+    for (int i = 0; args_node->num_filhos; i++) {
+      Nodo *current = args_node->filhos[i];
+      offset += get_size(current->tipo);
+      storeArg = current->iloc_code;
+      storeArg = merge_code(storeArg, gen_code(STOREAI, build_arg_temp(args_node->temp_reg), rsp_arg(), build_arg_im_value(offset)));
+      result_code = merge_code(result_code, storeArg);
     }
   }
-  
+
   ilocCode *jump = gen_code(JUMPI, build_arg_label(func_label), NULL, NULL);
   char *reg_result = gen_temp();
   ilocCode *load_result = gen_code(LOADAI, rsp_arg(), build_arg_im_value(12), build_arg_temp(reg_result));

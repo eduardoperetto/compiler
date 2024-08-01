@@ -324,8 +324,8 @@ bloco_while: TK_PR_WHILE '(' expressao ')' bloco_instrucoes {
 	$$ = cria_nodo_v2(cria_valor_lexico("while"), $5->tipo); 
 	adiciona_filho($$, $3); 
 	adiciona_filho($$, $5);
+	gen_while($$, $3, $5);
 	prt_dbg("bloco_while"); 
-	gen_while($$);
 } ;
 
 argumento_funcao: expressao { $$ = $1; prt_dbg("argumento_funcao"); };
