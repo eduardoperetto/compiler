@@ -218,11 +218,13 @@ void gen_load_literal(Nodo *val_node) {
   val_node->temp_reg = result->temp_reg;
 }
 
-void gen_assignment(Nodo *assign_node, Nodo *destiny, Nodo *expr) {
+void gen_assignment(Nodo *assign_node, Nodo *destiny, bool is_global, Nodo *expr) {
   ilocCode *store;
 
+  ilocArg *storageReg = is_global ? rbss_arg() : rfp_arg();
   int rfp_offset = is_inside_main() ? 0 : curr_func_rbss;
-  store = gen_code(STOREAI, build_arg_temp(expr->temp_reg), rfp_arg(), build_arg_im_value(rfp_offset + destiny->table_local_addr));
+
+  store = gen_code(STOREAI, build_arg_temp(expr->temp_reg), storageReg, build_arg_im_value(rfp_offset + destiny->table_local_addr));
 
   assign_node->iloc_code = expr->iloc_code;
   assign_node->iloc_code = merge_code(assign_node->iloc_code, store);
@@ -539,40 +541,53 @@ void print_code(ilocCode *code) {
         printf("%s: nop\n", (current->arg1)->label);
         break;
 
-      case LOADI:
-        printf("loadI ");
+      case JUMP: // OP -> arg1
+      case JUMPI:
+        printf("%s -> ", get_operation_string(current->operation));
+        print_arg(current->arg1);
+        printf("\n");
+        break;
+
+      case STORE: // OP arg1 => arg2, arg3
+      case STOREAI:
+      case STOREAO:
+      case CSTORE:
+      case CSTOREAI:
+      case CSTOREAO:
+        printf("%s ", get_operation_string(current->operation));
         print_arg(current->arg1);
         printf(" => ");
         print_arg(current->arg2);
-        printf("\n");
-        break;
-
-      case JUMPI:
-        printf("jumpI ->");
-        print_arg(current->arg1);
-        printf("\n");
-        break;
-
-      case STOREAI:
-        if ((current->arg1)->temp_reg) {
-          printf("storeAI %s => %s, %d\n",
-                 (current->arg1)->temp_reg,
-                 (current->arg2)->label,
-                 (current->arg3)->imediate_value);
-        } else {
-          printf("storeAI %s => %s, %d\n",
-                 (current->arg1)->label,
-                 (current->arg2)->label,
-                 (current->arg3)->imediate_value);
+        if (current->arg3 != NULL) {
+          printf(", ");
+          print_arg(current->arg3);
         }
+        printf("\n");
         break;
 
-      case CBR:
-        printf("cbr ");
+      case CBR: // "OP arg1 -> arg2" | "OP arg1 -> arg2, arg3"
+        printf("%s ", get_operation_string(current->operation));
         print_arg(current->arg1);
         printf(" -> ");
         print_arg(current->arg2);
+        if (current->arg3 != NULL) {
+          printf(", ");
+          print_arg(current->arg3);
+        }
+        printf("\n");
+        break;
+
+      case CMP_LT: // "OP arg1, arg2 -> arg3"
+      case CMP_LE:
+      case CMP_EQ:
+      case CMP_GE:
+      case CMP_GT:
+      case CMP_NE:
+        printf("%s ", get_operation_string(current->operation));
+        print_arg(current->arg1);
         printf(", ");
+        print_arg(current->arg2);
+        printf(" -> ");
         print_arg(current->arg3);
         printf("\n");
         break;
@@ -581,11 +596,15 @@ void print_code(ilocCode *code) {
         printf("halt\n");
         return;
 
-      default:
+      default: // Default is: "OP arg1, arg2 => arg3" | "OP arg1 => arg2"
         printf("%s ", get_operation_string(current->operation));
         print_arg(current->arg1);
         if (current->arg2 != NULL) {
-          printf(", ");
+          if (current->arg3 != NULL) {
+            printf(", ");
+          } else {
+            printf(" => ");
+          }
           print_arg(current->arg2);
         }
         if (current->arg3 != NULL) {

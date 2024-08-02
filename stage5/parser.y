@@ -260,7 +260,7 @@ atribuicao: variavel '=' expressao {
 
 	adiciona_filho($$, $3);
 	updateIdentifier(tableStack, $1->name, ($3->valor_lexico).valor, get_line_number());
-	gen_assignment($$, var, $3);
+	gen_assignment($$, var, $1->isGlobal, $3);
 	prt_dbg("atribuicao"); 
 };
 
@@ -426,8 +426,8 @@ expressao_terminal: variavel {
 	| literal  { $$ = $1; prt_dbg("expressao_terminal (literal)"); }
     ;
 
-literal:  TK_LIT_TRUE { $$ = cria_nodo_v2($1, BOOL); prt_dbg("literal (TK_LIT_TRUE)"); }
-	| TK_LIT_FALSE { $$ = cria_nodo_v2($1, BOOL); prt_dbg("literal (TK_LIT_FALSE)"); }
+literal:  TK_LIT_TRUE { $$ = cria_nodo_v2($1, BOOL); gen_load_literal($$); prt_dbg("literal (TK_LIT_TRUE)"); }
+	| TK_LIT_FALSE { $$ = cria_nodo_v2($1, BOOL); gen_load_literal($$); prt_dbg("literal (TK_LIT_FALSE)"); }
 	| TK_LIT_FLOAT  { $$ = cria_nodo_v2($1, FLOAT); prt_dbg("literal (TK_LIT_FLOAT)"); }
 	| TK_LIT_INT { $$ = cria_nodo_v2($1, INT); gen_load_literal($$); prt_dbg("literal (TK_LIT_INT)"); };
 

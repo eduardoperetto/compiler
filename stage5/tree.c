@@ -101,6 +101,7 @@ valorLexico atribui_yylval(char *yytext, TipoToken tipo, int num_lines) {
     case BOOL:
       bool value = strcmp(yytext, "true") == 0;
       valor_lexico.valor.b_val = value ? true : false;
+      valor_lexico.valor.i_val = value ? 1 : 0;
       break;
     case INT:
       valor_lexico.valor.i_val = atoi(yytext);

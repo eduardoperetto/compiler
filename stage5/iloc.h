@@ -98,7 +98,7 @@ ilocArg* rbss_arg();
 void gen_func_declaration(Nodo *header, Nodo *body, HashTableStack *table_stack);
 void gen_load_var(Nodo *var, bool is_global);
 void gen_load_literal(Nodo *val_node);
-void gen_assignment(Nodo *assign_node, Nodo* arg3, Nodo* expr);
+void gen_assignment(Nodo *assign_node, Nodo *destiny, bool is_global, Nodo *expr);
 void gen_return(Nodo *return_node, Nodo *expr_node);
 void gen_bin_expr(Nodo *root, Nodo *arg1, Nodo *arg2);
 void gen_invert_signal(Nodo *root, Nodo *arg);
