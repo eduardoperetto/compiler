@@ -117,10 +117,10 @@ void print_node_addresses(Nodo *raiz) {
     }
 }
 
-void exporta(void *arvore) {
-  Nodo *nodo_arvore;
-  nodo_arvore = (Nodo *)arvore;
-  print_node_addresses(nodo_arvore);
-  print_tree_labels(nodo_arvore);
+void exporta(void *tree) {
+  Nodo *nodo_tree;
+  nodo_tree = (Nodo *)tree;
+  print_node_addresses(nodo_tree);
+  print_tree_labels(nodo_tree);
   return;
 }

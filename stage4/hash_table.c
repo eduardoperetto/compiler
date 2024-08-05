@@ -250,7 +250,7 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line
   return newNode;
 }
 
-void checkNature(HashTableStack* stack, char* name, bool isFunction, int line) {
+void checkNatureAndGetLabel(HashTableStack* stack, char* name, bool isFunction, int line) {
   StackNode* currentStackNode = stack->top;
   Identifier* identifier = NULL;
 

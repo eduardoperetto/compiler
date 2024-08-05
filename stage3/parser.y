@@ -11,7 +11,7 @@
 int yylex(void);
 void yyerror (char const *mensagem);
 int get_line_number(void);
-extern void *arvore;
+extern void *tree;
 
 #define YYDEBUG 1
 
@@ -95,7 +95,7 @@ void prt_dbg(char* rule) {
 
 %%
 
-programa: definicoes_globais { arvore = $$; prt_dbg("programa"); };
+programa: definicoes_globais { tree = $$; prt_dbg("programa"); };
 
 definicoes_globais: definicao_global definicoes_globais {
         if ($1 != NULL) {

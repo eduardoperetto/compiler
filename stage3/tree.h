@@ -36,4 +36,4 @@ valorLexico cria_call(valorLexico label);
 valorLexico cria_valor_lexico(char* label);
 void adiciona_filho(Nodo *pai, Nodo *filho);
 void print_tree(Nodo *raiz);
-void exporta(void *arvore);
+void exporta(void *tree);

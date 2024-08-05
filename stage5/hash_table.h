@@ -12,14 +12,19 @@ typedef struct Identifier {
   char name[50];
   bool initialized;
   bool isFunction;
+  bool isGlobal;
   int declarationLine;
   TipoToken type;
   Value value;
+  int local_addr;
+  char *func_label;
   struct Identifier* next;
 } Identifier;
 
 typedef struct HashTable {
   Identifier* table[TABLE_SIZE];
+  bool is_global;
+  int curr_offset;
 } HashTable;
 
 typedef struct StackNode {
@@ -27,12 +32,15 @@ typedef struct StackNode {
     struct StackNode* next;
 } StackNode;
 
-typedef struct {
+typedef struct HashTableStack {
     StackNode* top;
 } HashTableStack;
 
-HashTable* createTable();
-void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction, int line);
+int get_size(TipoToken tipo);
+bool is_inside_main();
+
+HashTable* createTable(bool is_global);
+void addIdentifier(HashTableStack** stack, const char* name, TipoToken type, bool isFunction, bool is_global, int line);
 Identifier* getIdentifier(HashTable* table, const char* name, bool isFunction, int line);
 void freeTable(HashTable* table);
 void printTable(HashTable* table);
@@ -47,8 +55,13 @@ void freeStack(HashTableStack* stack);
 void createTableOnTop(HashTableStack** stack);
 void updateIdentifier(HashTableStack* stack, char* name, Value newValue, int line);
 Identifier* findIdentifier(HashTableStack* stack, char* name, bool isFunction, int line);
+void update_func_label(HashTableStack* stack, char* name, char *label);
+char* get_func_label(HashTableStack* stack, char* name);
 Nodo* getNodeFromId(HashTableStack* stack, char* id, bool isFunction, int line);
-void checkNature(HashTableStack* stack, char* name, bool isFunction, int line);
+Nodo* makeNodeFromIdentifier(Identifier *identifier);
+char* checkNatureAndGetLabel(HashTableStack* stack, char* name, bool isFunction, int line);
+void update_last_offset(int offset);
+int get_last_table_offset();
 
 /* Debug*/
 void printErrorPrefix(int line);

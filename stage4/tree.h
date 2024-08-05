@@ -49,6 +49,6 @@ void adiciona_filho(Nodo *pai, Nodo *filho);
 void print_tree(Nodo *raiz);
 void prt_node(void *ptr);
 const char* tipoTokenToString(TipoToken tipo);
-void exporta(void *arvore);
+void exporta(void *tree);
 
 #endif

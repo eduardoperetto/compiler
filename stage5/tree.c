@@ -49,6 +49,10 @@ Nodo *cria_nodo_v2(valorLexico valor, TipoToken tipo) {
   novoNodo->filhos = NULL;
   novoNodo->num_filhos = 0;
   novoNodo->tipo = tipo;
+  novoNodo->table_local_addr = -1;
+  novoNodo->iloc_code = NULL;
+  novoNodo->temp_reg = NULL;
+  novoNodo->temp_reg_false = NULL;
   prt_node(novoNodo);
   return novoNodo;
 }
@@ -58,9 +62,17 @@ Nodo *cria_nodo(valorLexico valor) {
   novoNodo->valor_lexico = valor;
   novoNodo->filhos = NULL;
   novoNodo->num_filhos = 0;
-  novoNodo->tipo = NONE;
+  novoNodo->table_local_addr = -1;
+  novoNodo->tipo = valor.tipo;
+  novoNodo->temp_reg_false = NULL;
+  novoNodo->temp_reg = NULL;
   prt_node(novoNodo);
   return novoNodo;
+}
+
+void assign_code(Nodo* node, ilocCode *code) {
+  if (node == NULL || code == NULL) return;
+  node->iloc_code = code;
 }
 
 void adiciona_filho(Nodo *pai, Nodo *filho) {
@@ -89,6 +101,7 @@ valorLexico atribui_yylval(char *yytext, TipoToken tipo, int num_lines) {
     case BOOL:
       bool value = strcmp(yytext, "true") == 0;
       valor_lexico.valor.b_val = value ? true : false;
+      valor_lexico.valor.i_val = value ? 1 : 0;
       break;
     case INT:
       valor_lexico.valor.i_val = atoi(yytext);
@@ -164,12 +177,12 @@ void print_node_addresses(Nodo *raiz) {
     }
 }
 
-void exporta(void *arvore) {
+void exporta(void *tree) {
   #if PRINT_TREE_ADDR
-  Nodo *nodo_arvore;
-  nodo_arvore = (Nodo *)arvore;
-  print_node_addresses(nodo_arvore);
-  print_tree_labels(nodo_arvore);
+  Nodo *nodo_tree;
+  nodo_tree = (Nodo *)tree;
+  print_node_addresses(nodo_tree);
+  print_tree_labels(nodo_tree);
   #endif
   return;
 }
@@ -183,6 +196,10 @@ const char* tipoTokenToString(TipoToken tipo) {
         case NONE: return "NONE";
         default: return "UNKNOWN";
     }
+}
+
+void print_node_code(Nodo* node) {
+  print_code(node->iloc_code);
 }
 
 void prt_node(void *ptr) {
@@ -217,6 +234,8 @@ void prt_node(void *ptr) {
     }
 	  printf("  }\n");
     printf("  tipo: %s\n", tipoTokenToString(nodo->tipo));
+    printf("  temp_reg: %s\n", nodo->temp_reg);
+    print_node_code(nodo);
     printf("}\n");
     #endif
 }

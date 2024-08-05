@@ -14,7 +14,7 @@ LIBS=-lm -lfl
 _DEPS = parser.tab.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o lex.yy.o parser.tab.o tree.o hash_table.o
+_OBJ = main.o lex.yy.o parser.tab.o tree.o hash_table.o iloc.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(ODIR)/%.c $(DEPS)
@@ -54,3 +54,8 @@ dot:
 	rm -f saida.dot
 	@$(MAKE) -s run
 	./etapa5 < input.txt | ./output2dot.sh > saida.dot
+
+ilocsim:
+	@$(MAKE) -s all
+	@$(SH) ./etapa5 < input.txt > output.iloc
+	python3 ilocsim.py -i -m -s -t < output.iloc

@@ -8,7 +8,24 @@
 HashTableStack* tableStack;
 HashTable* globalTable;
 
+static int last_table_offset = 0;
+static bool main_declared = false;
+static bool finished_main = false;
+
+bool is_inside_main() {
+  return main_declared && !finished_main;
+}
+
 /* Hash table */
+
+int get_size(TipoToken tipo) {
+    switch (tipo) {
+        case INT: return 4;
+        case FLOAT: return 8;
+        case BOOL: return 1;
+        case NONE: return 0;
+    }
+}
 
 // Gera um hash a partir do identificador ASCII
 unsigned int hash(const char* key) {
@@ -19,7 +36,7 @@ unsigned int hash(const char* key) {
   return hash % TABLE_SIZE;
 }
 
-HashTable* createTable() {
+HashTable* createTable(bool isGlobal) {
   HashTable* newTable = (HashTable*)malloc(sizeof(HashTable));
   for (int i = 0; i < TABLE_SIZE; i++) {
     newTable->table[i] = NULL;
@@ -27,23 +44,30 @@ HashTable* createTable() {
   return newTable;
 }
 
-Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction, int line) {
+Identifier* createIdentifier(const char* name, TipoToken type, bool isFunction, bool isGlobal, int line, int local_addr) {
   Identifier* newIdentifier = (Identifier*)malloc(sizeof(Identifier));
   strcpy(newIdentifier->name, name);
   newIdentifier->type = type;
   newIdentifier->isFunction = isFunction;
   newIdentifier->initialized = isFunction;
   newIdentifier->declarationLine = line;
+  newIdentifier->local_addr = local_addr;
+  newIdentifier->isGlobal = isGlobal;
   newIdentifier->next = NULL;
   return newIdentifier;
 }
 
-void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFunction, int line) {
-  if (table == NULL) {
-    table = createTable();
+void addIdentifier(HashTableStack** stack, const char* name, TipoToken type, bool isFunction, bool isGlobal, int line) {
+  HashTable *table;
+  if (isGlobal) {
+    table = getLast(stack);
+  } else {
+    table = getTop(stack);
   }
   unsigned int index = hash(name);
-  Identifier* newIdentifier = createIdentifier(name, type, isFunction, line);
+  int local_addr = table->curr_offset;
+  table->curr_offset += get_size(type);
+  Identifier* newIdentifier = createIdentifier(name, type, isFunction, isGlobal, line, local_addr);
   if (table->table[index] == NULL) {
     table->table[index] = newIdentifier;
   } else {
@@ -51,6 +75,9 @@ void addIdentifier(HashTable* table, const char* name, TipoToken type, bool isFu
     printf("Identificador '%s' já foi declarado.\n", name);
     printPrevDeclaration((table->table[index])->declarationLine);
     exit(ERR_DECLARED);
+  }
+  if (strcmp(name, "main") == 0) {
+    main_declared = true;
   }
 }
 
@@ -100,6 +127,8 @@ void printTable(HashTable* table) {
       printf("Name: %s, Type: %s, ", current->name, tipoStr);
       printf("IsFunction: %s, ", current->isFunction ? "true" : "false");
       printf("Initialized: %s, ", current->initialized ? "true" : "false");
+      printf("LocalAddr: %d, ", current->local_addr);
+      printf("Function label: %s, ", current->isFunction ? current->func_label : "Null");
       switch (current->type) {
         case BOOL:
           printf("Value: %d\n", current->value.b_val);
@@ -114,6 +143,7 @@ void printTable(HashTable* table) {
       current = current->next;
     }
   }
+  printf("Table current offset: %d\n", table->curr_offset);
   #if DEBUG_PARSER
   if (allIsNull) {
     printf("Table has no symbols\n");
@@ -144,9 +174,9 @@ void createTableOnTop(HashTableStack** stack) {
   if (*stack == NULL) {
     *stack = (HashTableStack*)malloc(sizeof(HashTableStack));
     initializeStack(*stack);
-    (*stack)->top = createStackNode(createTable());
+    (*stack)->top = createStackNode(createTable(false));
   }
-  HashTable* newTable = createTable();
+  HashTable* newTable = createTable(false);
   addOnTop(*stack, newTable);
 }
 
@@ -154,7 +184,7 @@ HashTable* getTop(HashTableStack** stack) {
   if (*stack == NULL) {
     *stack = (HashTableStack*)malloc(sizeof(HashTableStack));
     initializeStack(*stack);
-    (*stack)->top = createStackNode(createTable());
+    (*stack)->top = createStackNode(createTable(false));
   }
   if ((*stack)->top == NULL) {
     return NULL;
@@ -166,7 +196,8 @@ HashTable* getLast(HashTableStack** stack) {
   if (*stack == NULL) {
     *stack = (HashTableStack*)malloc(sizeof(HashTableStack));
     initializeStack(*stack);
-    (*stack)->top = createStackNode(createTable());
+    // When trying to get last table of stack, it is intended to get global scope
+    (*stack)->top = createStackNode(createTable(true));
   }
   StackNode* current = (*stack)->top;
   while (current->next != NULL) {
@@ -202,6 +233,32 @@ void updateIdentifier(HashTableStack* stack, char* name, Value newValue, int lin
   identifier->value = newValue;
 }
 
+void update_func_label(HashTableStack* stack, char* name, char *label) {
+  unsigned int index = hash(name);
+  Identifier* identifier = findIdentifier(stack, name, true, -1);
+  if (identifier == NULL) {
+    printErrorPrefix(-1);
+    printf("Erro interno (função %s não encontrada ao adicionar label).\n", name);
+    exit(ERR_UNDECLARED);
+  }
+  identifier->func_label = label;
+
+  if (strcmp(name, "main") == 0) {
+    finished_main = true;
+  }
+}
+
+char* get_func_label(HashTableStack* stack, char* name) {
+  unsigned int index = hash(name);
+  Identifier* identifier = findIdentifier(stack, name, true, get_line_number());
+  if (identifier == NULL) {
+    printErrorPrefix(get_line_number());
+    printf("Erro interno (função %s não encontrada ao recuperar label).\n", name);
+    exit(ERR_UNDECLARED);
+  }
+  return identifier->func_label;
+}
+
 Identifier* findIdentifier(HashTableStack* stack, char* name, bool isFunction, int line) {
   if (stack == NULL || stack->top == NULL) {
     printErrorPrefix(line);
@@ -231,11 +288,16 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line
     exit(ERR_UNDECLARED);
   }
 
+  return makeNodeFromIdentifier(identifier);
+}
+
+Nodo* makeNodeFromIdentifier(Identifier *identifier) {
   Nodo* newNode = (Nodo*)malloc(sizeof(Nodo));
-  newNode->valor_lexico.linha = -1;
+  newNode->valor_lexico.linha = identifier->declarationLine;
   newNode->valor_lexico.tipo = identifier->type;
   newNode->valor_lexico.label = strdup(identifier->name);
   newNode->num_filhos = 0;
+  newNode->table_local_addr = identifier->local_addr;
   newNode->filhos = NULL;
   newNode->tipo = identifier->type;
 
@@ -256,7 +318,7 @@ Nodo* getNodeFromId(HashTableStack* stack, char* name, bool isFunction, int line
   return newNode;
 }
 
-void checkNature(HashTableStack* stack, char* name, bool isFunction, int line) {
+char* checkNatureAndGetLabel(HashTableStack* stack, char* name, bool isFunction, int line) {
   StackNode* currentStackNode = stack->top;
   Identifier* identifier = NULL;
 
@@ -272,6 +334,16 @@ void checkNature(HashTableStack* stack, char* name, bool isFunction, int line) {
     printf("Identificador '%s' não foi declarado.\n", name);
     exit(ERR_UNDECLARED);
   }
+  return identifier->func_label;
+}
+
+void update_last_offset(int offset) {
+  last_table_offset = offset;
+}
+
+int get_last_table_offset() {
+  int offset = last_table_offset;
+  return offset;
 }
 
 /* Debug functions */
