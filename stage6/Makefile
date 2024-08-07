@@ -14,7 +14,7 @@ LIBS=-lm -lfl
 _DEPS = parser.tab.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o lex.yy.o parser.tab.o tree.o hash_table.o iloc.o
+_OBJ = main.o lex.yy.o parser.tab.o tree.o hash_table.o assembly.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(ODIR)/%.c $(DEPS)
@@ -49,3 +49,7 @@ tar:
 	@echo "REMEMBER TO SET DEBUG TO 0"
 	rm -f ./etapa6.tgz
 	tar cvzf etapa6.tgz .
+
+asm:
+	@$(MAKE) -s all
+	@$(SH) ./etapa6 < input.txt > output.s

@@ -8,7 +8,7 @@
 
 #include "tree.h"
 #include "hash_table.h"
-#include "iloc.h"
+#include "assembly.h"
 
 extern HashTableStack* tableStack;
 extern HashTable* globalTable;
