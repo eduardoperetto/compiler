@@ -395,6 +395,36 @@ int calc_rbss(Nodo *program_node) {
   return code_count + 6;  // encapsulation adds 5 instructions
 }
 
+char* gen_program_prologue(const char* file_name, Identifier* identifiers) {
+    int buffer_size = 1024; // To do: calculate size
+    char* prologue = (char*)malloc(buffer_size);
+    if (!prologue) {
+        fprintf(stderr, "Memory allocation failed\n");
+        return NULL;
+    }
+
+    // Initialize the prologue string
+    snprintf(prologue, buffer_size, ".file \"%s\"\n.text\n", "input.txt"); // Can we get the filename?
+
+    // Setup global variables/functions
+    Identifier* current = identifiers;
+    while (current != NULL) {
+        if (current->isGlobal) {
+            if (current->isFunction) {
+                snprintf(prologue + strlen(prologue), buffer_size - strlen(prologue),
+                         ".globl %s\n.type %s, @function\n", current->name, current->name);
+            } else {
+                snprintf(prologue + strlen(prologue), buffer_size - strlen(prologue),
+                         ".globl %s\n.data\n.align 4\n.type %s, @object\n.size %s, 4\n.text\n",
+                         current->name, current->name, current->name);
+            }
+        }
+        current = current->next;
+    }
+
+    return prologue;
+}
+
 void encapsulate_program_code(Nodo *program_node) {
   if (!main_label) {
     printErrorPrefix(get_line_number());
@@ -408,7 +438,11 @@ void encapsulate_program_code(Nodo *program_node) {
   init = merge_code(init, gen_code(LOADI, build_arg_im_value(calc_rbss(program_node)), rbss_arg(), NULL));
   asmCode *jump_to_main = gen_code(JUMPI, main_label, NULL, NULL);
   init = merge_code(init, jump_to_main);
+
+  // Program encapsulated
   program_node->asm_code = merge_code(init, program_node->asm_code);
+  //
+
   program_node->asm_code = merge_code(program_node->asm_code, halt());
 }
 
