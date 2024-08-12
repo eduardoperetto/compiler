@@ -53,3 +53,28 @@ tar:
 asm:
 	@$(MAKE) -s all
 	@$(SH) ./etapa6 < input.txt > output.s
+
+.PHONY: exec
+exec:
+	@$(MAKE) -s asm
+	gcc output.s -O0 -o exec
+
+asm_c:
+	gcc -O0 -S input_c.c
+
+c_exec:
+	@$(MAKE) -s asm_c
+	gcc input_c.s -O0 -o execc
+
+cmp:
+	@$(MAKE) -s c_exec
+	@RET_EXEC_C=`./execc; echo $$?`; \
+	$(MAKE) -s exec; \
+	RET_EXEC=`./exec; echo $$?`; \
+	echo "RET_EXEC_C = $$RET_EXEC_C"; \
+	echo "RET_EXEC = $$RET_EXEC"; \
+	if [ $$RET_EXEC -eq $$RET_EXEC_C ]; then \
+		echo "Return codes are the same"; \
+	else \
+		echo "Return codes differ"; \
+	fi

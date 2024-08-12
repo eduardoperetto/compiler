@@ -1,5 +1,6 @@
 #include "assembly.h"
 #include "hash_table.h"
+#include "string.h"
 
 #define TEMP_PREFFIX "r"
 #define LABEL_PREFFIX "L"
@@ -10,6 +11,21 @@ static int curr_func_rbss = 0;
 
 static asmArg *main_label;
 
+static Identifier *globals;
+
+void save_global(Identifier *id) {
+    if (globals == NULL) {
+        globals = id;
+    } else {
+        Identifier *current = globals;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = id;
+    }
+    id->next = NULL;
+}
+
 char *gen_label() {
   int length = snprintf(NULL, 0, "%s%d", LABEL_PREFFIX, curr_label_id);
   char *label = (char *)malloc(length + 1);
@@ -19,11 +35,14 @@ char *gen_label() {
 }
 
 char *gen_temp() {
-  int length = snprintf(NULL, 0, "%s%d", TEMP_PREFFIX, curr_temp_id);
-  char *temp = (char *)malloc(length + 1);
-  snprintf(temp, length + 1, "%s%d", TEMP_PREFFIX, curr_temp_id);
-  curr_temp_id++;
-  return temp;
+    const char *registers[] = {"%eax", "%ebx", "%ecx", "%edx"};
+    int register_index = curr_temp_id % 4;
+    curr_temp_id++;
+
+    char *temp = (char *)malloc(strlen(registers[register_index]) + 1);
+    strcpy(temp, registers[register_index]);
+
+    return temp;
 }
 
 asmCode *gen_code(asmOp operation, asmArg *arg1, asmArg *arg2, asmArg *arg3) {
@@ -105,52 +124,63 @@ asmArg *gen_temp_as_arg() {
   return build_arg_temp(reg);
 }
 
+char *global_ref(char* var_name) {
+  int size = strlen(var_name) + strlen("(%%rip)") + 1;
+  char *result = (char *)malloc(size);
+  snprintf(result, size, "%s(%%rip)", var_name);
+  return result;
+}
+
+char *local_ref(Nodo* var) {
+  int size = 3 + strlen("(%%rbp)") + 1;
+  char *result = (char *)malloc(size);
+  snprintf(result, size, "-%d(%%rbp)", var->table_local_addr + get_size(var->tipo));
+  return result;
+}
+
 asmArg *rfp_arg() {
-  return build_arg_label("rfp");
+  return build_arg_label("%rfp");
 }
 
 asmArg *rbss_arg() {
-  return build_arg_label("rbss");
+  return build_arg_label("%rbss");
 }
 
 asmArg *rsp_arg() {
-  return build_arg_label("rsp");
+  return build_arg_label("%rsp");
 }
 
 asmArg *rpc_arg() {
-  return build_arg_label("rpc");
+  return build_arg_label("%rpc");
+}
+
+asmArg *rbp_arg() {
+  return build_arg_label("%rbp");
+}
+
+asmArg *eax_arg() {
+  return build_arg_temp("%eax");
 }
 
 asmCode *end_function() {
   asmCode *code;
-  char *reg_return_addr = gen_temp();
-  code = gen_code(LOADAI, rfp_arg(), build_arg_im_value(0), build_arg_label(reg_return_addr));  /// loadAI rfp, 0 => r0 ; obtém end. retorno
-  char *reg_rsp = gen_temp();
-  code = merge_code(code, gen_code(LOADAI, rfp_arg(), build_arg_im_value(4), build_arg_label(reg_rsp)));  // loadAI rfp, 4 => r1 //obtém rsp salvo
-  char *reg_rfp = gen_temp();
-  code = merge_code(code, gen_code(LOADAI, rfp_arg(), build_arg_im_value(8), build_arg_label(reg_rfp)));  // loadAI rfp, 8 => r2 //obtém rfp salvo
-  code = merge_code(code, gen_code(I2I, build_arg_label(reg_rsp), rsp_arg(), NULL));                      // i2i r1 => rsp
-  code = merge_code(code, gen_code(I2I, build_arg_label(reg_rfp), rfp_arg(), NULL));                      // i2i r2 => rfp
-
-  code = merge_code(code, gen_code(JUMP, build_arg_label(reg_return_addr), NULL, NULL));  // jump => r0
+  code = gen_code(POPQ, rbp_arg(), NULL, NULL);
+  code = merge_code(code, gen_code(RET, NULL, NULL, NULL));  // jump => r0
   return code;
 }
 
 void gen_func_declaration(Nodo *header, Nodo *body, HashTableStack *table_stack) {
-  asmCode *nop = gen_label_with_nop();
-
-  asmCode *rsp_update;
-
+  asmCode *nop;
   bool is_main = strcmp("main", (header->valor_lexico).label) == 0;
   if (is_main) {
-    main_label = nop->arg1;
-    rsp_update = gen_code(ADDI, rsp_arg(), build_arg_im_value(get_last_table_offset()), rsp_arg());
+    main_label = build_arg_label("main");
+    nop = gen_code(NOP, main_label, NULL, NULL);
   } else {
-    nop = merge_code(nop, gen_code(I2I, rsp_arg(), rfp_arg(), NULL));
-    rsp_update = gen_header_activation_register(header);
+    nop = gen_code(NOP, build_arg_label((header->valor_lexico).label), NULL, NULL);
   }
 
-  nop = merge_code(nop, rsp_update);
+  nop = merge_code(nop, gen_code(PUSHQ, rbp_arg(), NULL, NULL));
+  nop = merge_code(nop, gen_code(MOVQ, rsp_arg(), rbp_arg(), NULL));
 
   nop = merge_code(nop, header->asm_code);
 
@@ -158,9 +188,7 @@ void gen_func_declaration(Nodo *header, Nodo *body, HashTableStack *table_stack)
 
   update_func_label(table_stack, (header->valor_lexico).label, (nop->arg1)->label);
 
-  if (!is_main) {
-    header->asm_code = merge_code(header->asm_code, end_function());
-  }
+  header->asm_code = merge_code(header->asm_code, end_function());
 }
 
 void capture_params(Nodo *header, Nodo *params) {
@@ -195,23 +223,22 @@ int get_header_ar_size(Nodo *header) {
 // Ordem de elementos no RA: endereço de retorno, old_rsp, old_rfp, parametros, valor_retorno; depois, vem var_locais.
 asmCode *gen_header_activation_register(Nodo *header) {
   int size = get_header_ar_size(header);
-  return gen_code(ADDI, rsp_arg(), build_arg_im_value(size), rsp_arg());
+  return gen_code(ADDL, rsp_arg(), build_arg_im_value(size), rsp_arg());
 }
 
 void gen_load_var(Nodo *var, bool is_global) {
-  asmArg *result = gen_temp_as_arg();
-  int rfp_offset = (is_inside_main() || is_global) ? 0 : curr_func_rbss;
-  asmArg *storageReg = is_global ? rbss_arg() : rfp_arg();
-  asmCode *load = gen_code(LOADAI, storageReg, build_arg_im_value(rfp_offset + var->table_local_addr), result);
-  var->asm_code = load;
-  var->temp_reg = result->temp_reg;
+  if (is_global) {
+    var->temp_reg = global_ref((var->valor_lexico).label);
+    return;
+  }
+  var->temp_reg = local_ref(var);
 }
 
 void gen_load_literal(Nodo *val_node) {
   asmArg *result = gen_temp_as_arg();
   asmCode *load;
   // Fazer um switch no futuro
-  load = gen_code(LOADI, build_arg_im_value((val_node->valor_lexico).valor.i_val), result, NULL);
+  load = gen_code(MOVL, build_arg_im_value((val_node->valor_lexico).valor.i_val), result, NULL);
   val_node->asm_code = load;
   val_node->temp_reg = result->temp_reg;
 }
@@ -219,34 +246,49 @@ void gen_load_literal(Nodo *val_node) {
 void gen_assignment(Nodo *assign_node, Nodo *destiny, bool is_global, Nodo *expr) {
   asmCode *store;
 
-  asmArg *storageReg = is_global ? rbss_arg() : rfp_arg();
-  int rfp_offset = is_inside_main() ? 0 : curr_func_rbss;
+  asmArg *storageReg = is_global ? build_arg_temp(global_ref((destiny->valor_lexico).label)) : build_arg_temp(local_ref(destiny));
 
-  store = gen_code(STOREAI, build_arg_temp(expr->temp_reg), storageReg, build_arg_im_value(rfp_offset + destiny->table_local_addr));
+  store = gen_code(MOVL, build_arg_temp(expr->temp_reg), storageReg, NULL);
 
   assign_node->asm_code = expr->asm_code;
   assign_node->asm_code = merge_code(assign_node->asm_code, store);
 }
 
 void gen_return(Nodo *return_node, Nodo *expr_node) {
-  int rfp_offset = is_inside_main() ? 0 : 12;
-  rfp_offset += get_last_table_offset();
-  asmCode *load_result_on_rsp = gen_code(STOREAI, build_arg_temp(expr_node->temp_reg), rfp_arg(), build_arg_im_value(rfp_offset));
-  return_node->asm_code = merge_code(expr_node->asm_code, load_result_on_rsp);
+  return_node->asm_code = expr_node->asm_code;
+  if (strcmp(expr_node->temp_reg, "%eax") != 0) {
+    return_node->asm_code = merge_code(return_node->asm_code, gen_code(MOVL, build_arg_temp(expr_node->temp_reg), eax_arg(), NULL));
+  }
 }
 
 bool is_equal(char *str1, char *str2) {
   return strcmp(str1, str2) == 0;
 }
 
-void gen_bin_expr_from_op(asmOp op, Nodo *root, Nodo *arg1, Nodo *arg2) {
-  asmArg *result_reg = gen_temp_as_arg();
+void gen_div(asmOp op, Nodo *root, Nodo *arg1, Nodo *arg2) {
   asmCode *code = arg1->asm_code;
   code = merge_code(code, arg2->asm_code);
-  asmCode *operation = gen_code(op, build_arg_temp(arg1->temp_reg), build_arg_temp(arg2->temp_reg), result_reg);
+  asmArg *temp = eax_arg();
+  code = merge_code(code, gen_code(MOVL, build_arg_temp(arg1->temp_reg), temp, NULL));
+  code = merge_code(code, gen_code(CLTD, NULL, NULL, NULL));
+  code = merge_code(code, gen_code(IDIVL, build_arg_temp(arg2->temp_reg), NULL, NULL));
+  root->asm_code = code;
+  root->temp_reg = temp->temp_reg;
+}
+
+void gen_bin_expr_from_op(asmOp op, Nodo *root, Nodo *arg1, Nodo *arg2) {
+  if (op == DIV) {
+    gen_div(op, root, arg1, arg2);
+    return;
+  }
+  asmCode *code = arg1->asm_code;
+  code = merge_code(code, arg2->asm_code);
+  asmArg *temp = eax_arg();
+  code = merge_code(code, gen_code(MOVL, build_arg_temp(arg1->temp_reg), temp, NULL));
+  asmCode *operation = gen_code(op, build_arg_temp(arg2->temp_reg), temp, NULL);
   code = merge_code(code, operation);
   root->asm_code = code;
-  root->temp_reg = result_reg->temp_reg;
+  root->temp_reg = temp->temp_reg;
 }
 
 asmOp string_to_op(char *operator) {
@@ -263,9 +305,9 @@ asmOp string_to_op(char *operator) {
   } else if (is_equal(operator, ">=")) {
     return CMP_GE;
   } else if (is_equal(operator, "+")) {
-    return ADD;
+    return ADDL;
   } else if (is_equal(operator, "-")) {
-    return SUB;
+    return SUBL;
   } else if (is_equal(operator, "*")) {
     return MULT;
   } else if (is_equal(operator, "/")) {
@@ -347,42 +389,31 @@ void gen_if(Nodo *root_if, Nodo *expr, Nodo *true_block, Nodo *else_block) {
   root_if->asm_code = result_code;
 }
 
-void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTableStack *stack) {
-  char *reg_return_addr = gen_temp();
-  asmCode *calc_return_addr = gen_code(ADDI, rpc_arg(), build_arg_im_value(4), build_arg_label(reg_return_addr));
-  asmCode *store_addr = gen_code(STOREAI, build_arg_label(reg_return_addr), rsp_arg(), build_arg_im_value(0));
-  asmCode *store_rsp = gen_code(STOREAI, rsp_arg(), rsp_arg(), build_arg_im_value(4));
-  asmCode *store_rfp = gen_code(STOREAI, rfp_arg(), rsp_arg(), build_arg_im_value(8));
-
-  asmCode *result_code = calc_return_addr;
-  result_code = merge_code(result_code, store_addr);
-  result_code = merge_code(result_code, store_rsp);
-  result_code = merge_code(result_code, store_rfp);
-
-  if (args_node != NULL) {
+void pass_parameters(asmCode *destiny, Nodo* args_node)
+{
+ if (args_node != NULL) {
     int offset = 12;
     asmCode *storeArg = args_node->asm_code;
     storeArg = merge_code(storeArg, gen_code(STOREAI, build_arg_temp(args_node->temp_reg), rsp_arg(), build_arg_im_value(offset)));
-    result_code = merge_code(result_code, storeArg);
+    destiny = merge_code(destiny, storeArg);
 
     for (int i = 0; args_node->num_filhos; i++) {
       Nodo *current = args_node->filhos[i];
       offset += get_size(current->tipo);
       storeArg = current->asm_code;
       storeArg = merge_code(storeArg, gen_code(STOREAI, build_arg_temp(args_node->temp_reg), rsp_arg(), build_arg_im_value(offset)));
-      result_code = merge_code(result_code, storeArg);
+      destiny = merge_code(destiny, storeArg);
     }
   }
+}
 
-  asmCode *jump = gen_code(JUMPI, build_arg_label(func_label), NULL, NULL);
-  char *reg_result = gen_temp();
-  asmCode *load_result = gen_code(LOADAI, rsp_arg(), build_arg_im_value(12), build_arg_temp(reg_result));
+void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTableStack *stack) {
+  asmCode *result_code = gen_code(CALL, build_arg_label(func_label), NULL, NULL);
 
-  result_code = merge_code(result_code, jump);
-  result_code = merge_code(result_code, load_result);
-
-  call_node->asm_code = result_code;
-  call_node->temp_reg = reg_result;
+  // pass_parameters(result_code, args_node);
+  call_node->asm_code = gen_code(MOVL, build_arg_im_value(0), eax_arg(), NULL);
+  call_node->asm_code = merge_code(call_node->asm_code, result_code);
+  call_node->temp_reg = "%eax";
 }
 
 int calc_rbss(Nodo *program_node) {
@@ -395,7 +426,7 @@ int calc_rbss(Nodo *program_node) {
   return code_count + 6;  // encapsulation adds 5 instructions
 }
 
-char* gen_program_prologue(const char* file_name, Identifier* identifiers) {
+asmCode* gen_program_prologue(HashTable* global_table) {
     int buffer_size = 1024; // To do: calculate size
     char* prologue = (char*)malloc(buffer_size);
     if (!prologue) {
@@ -404,46 +435,59 @@ char* gen_program_prologue(const char* file_name, Identifier* identifiers) {
     }
 
     // Initialize the prologue string
-    snprintf(prologue, buffer_size, ".file \"%s\"\n.text\n", "input.txt"); // Can we get the filename?
+    snprintf(prologue, buffer_size, ".file \"%s\"\n\t", ""); // Can we get the filename?
+
+    Identifier* globalVars;
+    Identifier* globalFuncs;
+    getAllIds(global_table, &globalVars, &globalFuncs);
 
     // Setup global variables/functions
-    Identifier* current = identifiers;
+    Identifier* current = globalVars;
     while (current != NULL) {
         if (current->isGlobal) {
-            if (current->isFunction) {
-                snprintf(prologue + strlen(prologue), buffer_size - strlen(prologue),
-                         ".globl %s\n.type %s, @function\n", current->name, current->name);
-            } else {
-                snprintf(prologue + strlen(prologue), buffer_size - strlen(prologue),
-                         ".globl %s\n.data\n.align 4\n.type %s, @object\n.size %s, 4\n.text\n",
-                         current->name, current->name, current->name);
-            }
+          snprintf(
+            prologue + strlen(prologue), 
+            buffer_size - strlen(prologue),
+            ".text\n\t.globl %s\n\t.bss\n\t.align 4\n\t.type %s, @object\n\t.size %s, %d\n%s:\n\t.zero %d\n\t",
+            current->name, 
+            current->name, 
+            current->name,
+            get_size(current->type),
+            current->name,
+            get_size(current->type)
+          );
         }
         current = current->next;
     }
 
-    return prologue;
+    current = globalFuncs;
+    while (current != NULL) {
+        if (current->isGlobal) {
+          snprintf(
+            prologue + strlen(prologue), buffer_size - strlen(prologue),
+              ".text\n\t.globl %s\n\t.type %s, @function\n\t", 
+              current->name, 
+              current->name
+            );
+        }
+        current = current->next;
+    }
+
+    return gen_code(ASM_CHAR_CODE, build_arg_label(prologue), NULL, NULL);
 }
 
-void encapsulate_program_code(Nodo *program_node) {
+void encapsulate_program_code(Nodo *program_node, HashTable *global_table) {
   if (!main_label) {
     printErrorPrefix(get_line_number());
     printf("Programa deve conter uma função 'main'.\n");
     exit(-1);
   }
-
   asmCode *init;
-  init = gen_code(LOADI, build_arg_im_value(1024), rsp_arg(), NULL);
-  init = merge_code(init, gen_code(LOADI, build_arg_im_value(1024), rfp_arg(), NULL));
-  init = merge_code(init, gen_code(LOADI, build_arg_im_value(calc_rbss(program_node)), rbss_arg(), NULL));
-  asmCode *jump_to_main = gen_code(JUMPI, main_label, NULL, NULL);
-  init = merge_code(init, jump_to_main);
+  init = gen_program_prologue(global_table);
 
   // Program encapsulated
   program_node->asm_code = merge_code(init, program_node->asm_code);
   //
-
-  program_node->asm_code = merge_code(program_node->asm_code, halt());
 }
 
 /* Debug */
@@ -456,65 +500,65 @@ const char *get_operation_string(asmOp operation) {
     case SUB:
       return "sub";
     case MULT:
-      return "mult";
+      return "imull";
     case DIV:
       return "div";
-    case ADDI:
-      return "addI";
-    case SUBI:
-      return "subI";
-    case RSUBI:
-      return "rsubI";
+    case ADDL:
+      return "addl";
+    case SUBL:
+      return "subl";
+    case RSUBL:
+      return "rsubl";
     case MULTI:
-      return "multI";
+      return "multl";
     case DIVI:
-      return "divI";
+      return "divl";
     case RDIVI:
-      return "rdivI";
+      return "rdivl";
     case LSHIFT:
       return "lshift";
     case LSHIFTI:
-      return "lshiftI";
+      return "lshiftl";
     case RSHIFT:
       return "rshift";
     case RSHIFTI:
-      return "rshiftI";
+      return "rshiftl";
     case AND:
       return "and";
     case ANDI:
-      return "andI";
+      return "andl";
     case OR:
       return "or";
     case ORI:
-      return "orI";
+      return "orl";
     case XOR:
       return "xor";
     case XORI:
-      return "xorI";
-    case LOADI:
-      return "loadI";
+      return "xorl";
+    case MOVL:
+      return "movl";
     case LOAD:
       return "load";
     case LOADAI:
-      return "loadAI";
+      return "loadAl";
     case LOADA0:
       return "loadA0";
     case CLOAD:
       return "cload";
     case CLOADAI:
-      return "cloadAI";
+      return "cloadAl";
     case CLOADA0:
       return "cloadA0";
     case STORE:
       return "store";
     case STOREAI:
-      return "storeAI";
+      return "storeAl";
     case STOREAO:
       return "storeAO";
     case CSTORE:
       return "cstore";
     case CSTOREAI:
-      return "cstoreAI";
+      return "cstoreAl";
     case CSTOREAO:
       return "cstoreAO";
     case I2I:
@@ -526,7 +570,7 @@ const char *get_operation_string(asmOp operation) {
     case I2C:
       return "i2c";
     case JUMPI:
-      return "jumpI";
+      return "jumpl";
     case JUMP:
       return "jump";
     case CBR:
@@ -543,6 +587,20 @@ const char *get_operation_string(asmOp operation) {
       return "cmp_GT";
     case CMP_NE:
       return "cmp_NE";
+    case RET:
+      return "ret";
+    case PUSHQ:
+      return "pushq";
+    case MOVQ:
+      return "movq";
+    case POPQ:
+      return "popq";
+    case CALL:
+      return "call";
+    case CLTD:
+      return "cltd";
+    case IDIVL:
+      return "idivl";
     default:
       return "unknown_op";
   }
@@ -555,7 +613,7 @@ void print_arg(asmArg *arg) {
   } else if (arg->label != NULL) {
     printf("%s", arg->label);
   } else {
-    printf("%d", arg->imediate_value);
+    printf("$%d", arg->imediate_value);
   }
 }
 
@@ -569,78 +627,31 @@ void print_code(asmCode *code) {
 
   while (current != NULL) {
     switch (current->operation) {
+      case ASM_CHAR_CODE:
+        printf("\t%s", (current->arg1)->label);
+        break;
+
       case NOP:
-        printf("%s: nop\n", (current->arg1)->label);
+        printf("\n%s: nop\n", (current->arg1)->label);
         break;
-
-      case JUMP: // OP -> arg1
-      case JUMPI:
-        printf("%s -> ", get_operation_string(current->operation));
-        print_arg(current->arg1);
-        printf("\n");
-        break;
-
-      case STORE: // OP arg1 => arg2, arg3
-      case STOREAI:
-      case STOREAO:
-      case CSTORE:
-      case CSTOREAI:
-      case CSTOREAO:
-        printf("%s ", get_operation_string(current->operation));
-        print_arg(current->arg1);
-        printf(" => ");
-        print_arg(current->arg2);
-        if (current->arg3 != NULL) {
-          printf(", ");
-          print_arg(current->arg3);
-        }
-        printf("\n");
-        break;
-
-      case CBR: // "OP arg1 -> arg2" | "OP arg1 -> arg2, arg3"
-        printf("%s ", get_operation_string(current->operation));
-        print_arg(current->arg1);
-        printf(" -> ");
-        print_arg(current->arg2);
-        if (current->arg3 != NULL) {
-          printf(", ");
-          print_arg(current->arg3);
-        }
-        printf("\n");
-        break;
-
-      case CMP_LT: // "OP arg1, arg2 -> arg3"
-      case CMP_LE:
-      case CMP_EQ:
-      case CMP_GE:
-      case CMP_GT:
-      case CMP_NE:
-        printf("%s ", get_operation_string(current->operation));
-        print_arg(current->arg1);
-        printf(", ");
-        print_arg(current->arg2);
-        printf(" -> ");
-        print_arg(current->arg3);
-        printf("\n");
-        break;
-
+      
       case HALT:
-        printf("halt\n");
+        printf("\thalt\n");
         return;
 
+      case RET:
+        printf("\tret\n");
+        break;
+
       default: // Default is: "OP arg1, arg2 => arg3" | "OP arg1 => arg2"
-        printf("%s ", get_operation_string(current->operation));
+        printf("\t%s ", get_operation_string(current->operation));
         print_arg(current->arg1);
         if (current->arg2 != NULL) {
-          if (current->arg3 != NULL) {
-            printf(", ");
-          } else {
-            printf(" => ");
-          }
+          printf(", ");
           print_arg(current->arg2);
         }
         if (current->arg3 != NULL) {
-          printf(" => ");
+          printf(", ");
           print_arg(current->arg3);
         }
         printf("\n");

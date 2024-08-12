@@ -12,17 +12,27 @@ typedef struct HashTable HashTable;
 #define DEBUG_ASM 1
 
 typedef enum AsmOperator {
+    ASM_CHAR_CODE, // Acompanha um código Assembly "pronto" no primeiro parâmetro
     NOP, // Não faz nada
     HALT,
+
+    /* ASM */
+    RET,
+    PUSHQ,
+    MOVQ,
+    POPQ,
+    CALL,
+    CLTD,
+    IDIVL,
 
     /* Operações */
     ADD, // R3 = R1 + R2
     SUB, // R3 = R1 - R2
     MULT, // R3 = R1 * R2
     DIV, // R3 = R1 / R2
-    ADDI, // R3 = R1 + C2
-    SUBI, // R3 = R1 - C2
-    RSUBI, // R3 = C2 - R1
+    ADDL, // R3 = R1 + C2
+    SUBL, // R3 = R1 - C2
+    RSUBL, // R3 = C2 - R1
     MULTI, // R3 = R1 * C2
     DIVI, // R3 = R1 / C2
     RDIVI, // R3 = C2 / R1
@@ -36,7 +46,7 @@ typedef enum AsmOperator {
     ORI, // R3 = R1 || C2
     XOR, // R3 = R1 XOR R2
     XORI, // R3 = R1 XOR C2
-    LOADI, // R2 = C1
+    MOVL, // R2 = C1
     LOAD, // R2 = MEMORIA(R1)
     LOADAI, // R3 = MEMORIA(R1 + C2)
     LOADA0, // R3 = MEMORIA(R1 + R2)
@@ -71,6 +81,7 @@ typedef struct AsmArgument
     char *label;
     char *temp_reg;
     int imediate_value;
+    bool specialReg;
 } asmArg;
 
 typedef struct AsmCode
@@ -108,7 +119,7 @@ void gen_while(Nodo *root_while, Nodo* expr, Nodo* block);
 void gen_if(Nodo *root_if, Nodo* expr, Nodo *true_block, Nodo *else_block);
 void gen_call_func(Nodo *call_node, Nodo *args_node, char *func_label, HashTableStack *stack);
 void capture_params(Nodo* header, Nodo* params);
-void encapsulate_program_code(Nodo* program_node);
+void encapsulate_program_code(Nodo* program_node, HashTable *global_table);
 const char* get_operation_string(asmOp operation);
 void print_arg(asmArg *arg);
 void print_code(asmCode *code);

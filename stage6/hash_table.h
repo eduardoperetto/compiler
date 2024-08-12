@@ -44,6 +44,7 @@ void addIdentifier(HashTableStack** stack, const char* name, TipoToken type, boo
 Identifier* getIdentifier(HashTable* table, const char* name, bool isFunction, int line);
 void freeTable(HashTable* table);
 void printTable(HashTable* table);
+void getAllIds(HashTable* table, Identifier** varIds, Identifier** functionIds);
 
 StackNode* createStackNode(HashTable* hashTable);
 void initializeStack(HashTableStack* stack);
