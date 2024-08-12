@@ -165,7 +165,7 @@ asmArg *eax_arg() {
 asmCode *end_function() {
   asmCode *code;
   code = gen_code(POPQ, rbp_arg(), NULL, NULL);
-  code = merge_code(code, gen_code(RET, NULL, NULL, NULL));  // jump => r0
+  code = merge_code(code, gen_code(RET, NULL, NULL, NULL));
   return code;
 }
 
@@ -259,6 +259,8 @@ void gen_return(Nodo *return_node, Nodo *expr_node) {
   if (strcmp(expr_node->temp_reg, "%eax") != 0) {
     return_node->asm_code = merge_code(return_node->asm_code, gen_code(MOVL, build_arg_temp(expr_node->temp_reg), eax_arg(), NULL));
   }
+  return_node->asm_code = merge_code(return_node->asm_code, gen_code(POPQ, rbp_arg(), NULL, NULL));
+  return_node->asm_code = merge_code(return_node->asm_code, gen_code(RET, NULL, NULL, NULL));
 }
 
 bool is_equal(char *str1, char *str2) {
@@ -293,17 +295,17 @@ void gen_bin_expr_from_op(asmOp op, Nodo *root, Nodo *arg1, Nodo *arg2) {
 
 asmOp string_to_op(char *operator) {
   if (is_equal(operator, "==")) {
-    return CMP_EQ;
+    return CMPL;
   } else if (is_equal(operator, "!=")) {
-    return CMP_NE;
+    return CMPL;
   } else if (is_equal(operator, "<")) {
-    return CMP_LT;
+    return CMPL;
   } else if (is_equal(operator, "<=")) {
-    return CMP_LE;
+    return CMPL;
   } else if (is_equal(operator, ">")) {
-    return CMP_GT;
+    return CMPL;
   } else if (is_equal(operator, ">=")) {
-    return CMP_GE;
+    return CMPL;
   } else if (is_equal(operator, "+")) {
     return ADDL;
   } else if (is_equal(operator, "-")) {
@@ -352,7 +354,8 @@ void gen_while(Nodo *root_while, Nodo *expr, Nodo *block) {
 
   asmCode *while_code = gen_code(NOP, arg_aux, NULL, NULL); // Label aux
   while_code = merge_code(while_code, expr->asm_code); // Expr.code
-  while_code = merge_code(while_code, gen_code(CBR, build_arg_temp(expr->temp_reg), arg_label_true, arg_label_false)); // Branch based on expr temp
+  while_code = merge_code(while_code, gen_code(JNE, arg_label_true, NULL, NULL)); // Branch based on expr temp
+  while_code = merge_code(while_code, gen_code(JUMP, arg_label_false, NULL, NULL)); // Branch based on expr temp
   while_code = merge_code(while_code, gen_code(NOP, arg_label_true, NULL, NULL)); // Label true
   while_code = merge_code(while_code, block->asm_code); // Cmd block
   while_code = merge_code(while_code, gen_code(JUMPI, arg_aux, NULL, NULL)); // Jump aux
@@ -372,9 +375,10 @@ void gen_if(Nodo *root_if, Nodo *expr, Nodo *true_block, Nodo *else_block) {
 
   asmCode *result_code = expr->asm_code;
 
-  asmCode *branch = gen_code(CBR, build_arg_temp(expr->temp_reg), build_arg_label(label_true), build_arg_label(label_false));
-
+  asmCode *branch = gen_code(JNE, build_arg_label(label_true), NULL, NULL);
   result_code = merge_code(result_code, branch);
+
+  result_code = merge_code(result_code, gen_code(JUMP, build_arg_label(label_false), NULL, NULL));
 
   result_code = merge_code(result_code, label_nop_true);
   result_code = merge_code(result_code, true_block->asm_code);
@@ -570,9 +574,9 @@ const char *get_operation_string(asmOp operation) {
     case I2C:
       return "i2c";
     case JUMPI:
-      return "jumpl";
+      return "jmp";
     case JUMP:
-      return "jump";
+      return "jmp";
     case CBR:
       return "cbr";
     case CMP_LT:
@@ -601,6 +605,12 @@ const char *get_operation_string(asmOp operation) {
       return "cltd";
     case IDIVL:
       return "idivl";
+    case JE:
+      return "je";
+    case JNE:
+      return "jne";
+    case CMPL:
+      return "cmpl";
     default:
       return "unknown_op";
   }

@@ -24,6 +24,9 @@ typedef enum AsmOperator {
     CALL,
     CLTD,
     IDIVL,
+    JE,
+    JNE,
+    CMPL,
 
     /* Operações */
     ADD, // R3 = R1 + R2
