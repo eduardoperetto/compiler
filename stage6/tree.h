@@ -1,7 +1,7 @@
 #ifndef TREE_H
 #define TREE_H
 
-#include "iloc.h"
+#include "assembly.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -37,7 +37,7 @@ typedef struct Nodo {
   struct Nodo **filhos;
   int num_filhos;
   int table_local_addr;
-  ilocCode* iloc_code;
+  asmCode* asm_code;
   char* temp_reg;
   char* temp_reg_false;
   TipoToken tipo;
@@ -57,7 +57,7 @@ valorLexico atribui_yylval(char *yytext, TipoToken tipo, int num_lines);
 
 Nodo* cria_nodo(valorLexico valor);
 Nodo* cria_nodo_v2(valorLexico valor, TipoToken tipo);
-void assign_code(Nodo* node, ilocCode *code);
+void assign_code(Nodo* node, asmCode *code);
 void copy_code_and_free(Nodo* destiny, Nodo* source);
 valorLexico cria_call(valorLexico label);
 valorLexico cria_valor_lexico(char *label);

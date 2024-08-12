@@ -7,6 +7,8 @@
 **.dot
 */entrega*
 tests
-*/input.txt
 **.pyc
 **.iloc
+*/exec*
+*/input*
+**.s

@@ -8,7 +8,7 @@
 
 #include "tree.h"
 #include "hash_table.h"
-#include "iloc.h"
+#include "assembly.h"
 
 extern HashTableStack* tableStack;
 extern HashTable* globalTable;
@@ -111,9 +111,9 @@ void prt_dbg(char* rule) {
 programa: definicoes_globais { 
 	tree = $$;
 	prt_dbg("programa"); 
-	encapsulate_program_code($$);
-	#if DEBUG_PARSER
 	HashTable* topTable = getTop(&tableStack);
+	encapsulate_program_code($$, topTable);
+	#if DEBUG_PARSER
 	printTable(topTable);
 	#endif
 	print_node_code($$);
@@ -410,6 +410,11 @@ expressao9: '(' expressao ')'  { $$ = $2; prt_dbg("expressao9"); };
 
 variavel: TK_IDENTIFICADOR {
 	$$ = findIdentifier(tableStack, $1.label, false, get_line_number()); 
+	if ($$ == NULL) {
+		printErrorPrefix(get_line_number());
+    	printf("Variável '%s' não foi declarada.\n", $1.label);
+		exit(ERR_UNDECLARED);
+	}
 	prt_dbg("variavel"); 
 }
 

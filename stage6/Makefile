@@ -14,7 +14,7 @@ LIBS=-lm -lfl
 _DEPS = parser.tab.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = main.o lex.yy.o parser.tab.o tree.o hash_table.o iloc.o
+_OBJ = main.o lex.yy.o parser.tab.o tree.o hash_table.o assembly.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: $(ODIR)/%.c $(DEPS)
@@ -49,3 +49,32 @@ tar:
 	@echo "REMEMBER TO SET DEBUG TO 0"
 	rm -f ./etapa6.tgz
 	tar cvzf etapa6.tgz .
+
+asm:
+	@$(MAKE) -s all
+	@$(SH) ./etapa6 < input.txt > output.s
+
+.PHONY: exec
+exec:
+	@$(MAKE) -s asm
+	gcc output.s -O0 -o exec
+
+asm_c:
+	gcc -O0 -S input_c.c
+
+c_exec:
+	@$(MAKE) -s asm_c
+	gcc input_c.s -O0 -o execc
+
+cmp:
+	@$(MAKE) -s c_exec
+	@RET_EXEC_C=`./execc; echo $$?`; \
+	$(MAKE) -s exec; \
+	RET_EXEC=`./exec; echo $$?`; \
+	echo "RET_EXEC_C = $$RET_EXEC_C"; \
+	echo "RET_EXEC = $$RET_EXEC"; \
+	if [ $$RET_EXEC -eq $$RET_EXEC_C ]; then \
+		echo "Return codes are the same"; \
+	else \
+		echo "Return codes differ"; \
+	fi

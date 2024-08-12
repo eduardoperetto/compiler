@@ -50,7 +50,7 @@ Nodo *cria_nodo_v2(valorLexico valor, TipoToken tipo) {
   novoNodo->num_filhos = 0;
   novoNodo->tipo = tipo;
   novoNodo->table_local_addr = -1;
-  novoNodo->iloc_code = NULL;
+  novoNodo->asm_code = NULL;
   novoNodo->temp_reg = NULL;
   novoNodo->temp_reg_false = NULL;
   prt_node(novoNodo);
@@ -70,9 +70,9 @@ Nodo *cria_nodo(valorLexico valor) {
   return novoNodo;
 }
 
-void assign_code(Nodo* node, ilocCode *code) {
+void assign_code(Nodo* node, asmCode *code) {
   if (node == NULL || code == NULL) return;
-  node->iloc_code = code;
+  node->asm_code = code;
 }
 
 void adiciona_filho(Nodo *pai, Nodo *filho) {
@@ -199,7 +199,7 @@ const char* tipoTokenToString(TipoToken tipo) {
 }
 
 void print_node_code(Nodo* node) {
-  print_code(node->iloc_code);
+  print_code(node->asm_code);
 }
 
 void prt_node(void *ptr) {

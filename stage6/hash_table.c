@@ -117,6 +117,44 @@ void freeTable(HashTable* table) {
   free(table);
 }
 
+void getAllIds(HashTable* table, Identifier** varIds, Identifier** functionIds) {
+    Identifier* variableTail = NULL;
+    Identifier* functionTail = NULL;
+
+    // Initialize the heads to NULL
+    *varIds = NULL;
+    *functionIds = NULL;
+
+    for (int i = 0; i < TABLE_SIZE; i++) {
+        Identifier* current = table->table[i];
+        while (current != NULL) {
+            Identifier* newIdentifier = (Identifier*)malloc(sizeof(Identifier));
+            *newIdentifier = *current;
+            newIdentifier->next = NULL;
+
+            if (!current->isFunction) {
+                if (*varIds == NULL) {
+                    *varIds = newIdentifier;
+                    variableTail = newIdentifier;
+                } else {
+                    variableTail->next = newIdentifier;
+                    variableTail = newIdentifier;
+                }
+            } else {
+                if (*functionIds == NULL) {
+                    *functionIds = newIdentifier;
+                    functionTail = newIdentifier;
+                } else {
+                    functionTail->next = newIdentifier;
+                    functionTail = newIdentifier;
+                }
+            }
+
+            current = current->next;
+        }
+    }
+}
+
 void printTable(HashTable* table) {
   bool allIsNull = true;
   for (int i = 0; i < TABLE_SIZE; i++) {
