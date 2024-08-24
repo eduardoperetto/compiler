@@ -1,0 +1,10 @@
+int x; y,
+
+() | int / main
+{
+    y = 0,
+    x = 3,
+    if (x*y | true) {
+        y = -1,
+    }
+}
